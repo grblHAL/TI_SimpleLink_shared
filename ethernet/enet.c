@@ -36,7 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-#include "base/driver.h"
+#include "shared/base/driver.h"
 
 #if ETHERNET_ENABLE
 

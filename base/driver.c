@@ -58,7 +58,7 @@ static void trinamic_diag1_isr (void);
 #endif
 
 #if ETHERNET_ENABLE
-  #include "ethernet/enet.h"
+  #include "shared/ethernet/enet.h"
   #if TELNET_ENABLE
     #include "networking/TCPStream.h"
   #endif
