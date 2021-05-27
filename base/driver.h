@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2020 Terje Io
+  Copyright (c) 2018-2021 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -36,6 +36,7 @@
 #ifdef __MSP432E401Y__
 #include "msp.h"
 #include <ti/devices/msp432e4/driverlib/driverlib.h>
+#include <ti/devices/msp432e4/driverlib/inc/hw_gpio.h>
 #else
 #include "tiva.h"
 #endif
@@ -46,20 +47,26 @@
 
 #include "grbl/hal.h"
 #include "grbl/nuts_bolts.h"
+#include "grbl/crossbar.h"
 
 #define FreeRTOS
 
+#ifndef SDCARD_ENABLE
+#define SDCARD_ENABLE           0
+#endif
 #ifndef ETHERNET_ENABLE
 #define ETHERNET_ENABLE         0
 #endif
 #ifndef TELNET_ENABLE
 #define TELNET_ENABLE           0
+#elif !SDCARD_ENABLE
+#undef TELNET_ENABLE
+#endif
+#ifndef FTP_ENABLE
+#define FTP_ENABLE              0
 #endif
 #ifndef WEBSOCKET_ENABLE
 #define WEBSOCKET_ENABLE        0
-#endif
-#ifndef SDCARD_ENABLE
-#define SDCARD_ENABLE           0
 #endif
 #ifndef KEYPAD_ENABLE
 #define KEYPAD_ENABLE           0
@@ -110,6 +117,8 @@
 #endif
 
 // End configuration
+
+//#define SERIAL2_MOD
 
 #if KEYPAD_ENABLE || (TRINAMIC_ENABLE && TRINAMIC_I2C)
 #define I2C_ENABLE 1
@@ -199,6 +208,53 @@ void laser_ppi_mode (bool on);
 
 #endif
 
+#ifndef STEP_PORT_X
+#define STEP_PORT_X STEP_PORT
+#endif
+#ifndef STEP_PORT_Y
+#define STEP_PORT_Y STEP_PORT
+#endif
+#ifndef STEP_PORT_Z
+#define STEP_PORT_Z STEP_PORT
+#endif
+#ifndef DIRECTION_PORT_X
+#define DIRECTION_PORT_X DIRECTION_PORT
+#endif
+#ifndef DIRECTION_PORT_Y
+#define DIRECTION_PORT_Y DIRECTION_PORT
+#endif
+#ifndef DIRECTION_PORT_Z
+#define DIRECTION_PORT_Z DIRECTION_PORT
+#endif
+
+typedef struct {
+    pin_function_t id;
+    uint32_t port;
+    uint8_t pin;
+    pin_group_t group;
+    volatile bool active;
+    volatile bool debounce;
+    pin_irq_mode_t irq_mode;
+} input_signal_t;
+
+typedef struct {
+    pin_function_t id;
+    uint32_t port;
+    uint8_t pin;
+    pin_group_t group;
+} output_signal_t;
+
+typedef struct {
+    uint8_t n_pins;
+    union {
+        input_signal_t *inputs;
+        output_signal_t *outputs;
+    } pins;
+} pin_group_pins_t;
+
 void selectStream (stream_type_t stream);
+#ifdef HAS_BOARD_INIT
+void board_init(pin_group_pins_t *aux_inputs, pin_group_pins_t *aux_outputs);
+#endif
 
 #endif

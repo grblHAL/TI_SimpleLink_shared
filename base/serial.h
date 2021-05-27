@@ -24,10 +24,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "driver.h"
 #include "grbl/stream.h"
 
 #define BACKCHANNEL // comment out to use UART1 instead of UART0 (Tiva C Backchannel)
-#define SERIAL2_MOD
 
 #define uartSysctl(n) uartS(n)
 #define uartS(n) SYSCTL_PERIPH_UART ## n
@@ -121,7 +121,9 @@ uint16_t serialRxFree(void);
 void serialRxFlush(void);
 void serialRxCancel(void);
 
+#if MPG_MODE_ENABLE
 #ifdef SERIAL2_MOD
+#endif
 
 #define SERIAL2 7
 #define SERIAL2_SYSCTL uartSysctl(SERIAL2)

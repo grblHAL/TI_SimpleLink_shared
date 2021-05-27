@@ -1,7 +1,7 @@
 //
 // enet.c - lwIP/FreeRTOS TCP/IP stream implementation
 //
-// v1.3 / 2021-01-22 / Io Engineering / Terje
+// v1.3 / 2021-05-21 / Io Engineering / Terje
 //
 
 /*
@@ -57,6 +57,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "networking/networking.h"
 #include "networking/TCPStream.h"
 #include "networking/WsStream.h"
+#include "networking/ftpd.h"
 
 #define SYSTICK_INT_PRIORITY    0x80
 #define ETHERNET_INT_PRIORITY   0xC0
@@ -97,9 +98,12 @@ static void report_options (bool newopt)
 {
     on_report_options(newopt);
 
-    if(newopt)
-        hal.stream.write("[IP:");
-    else {
+    if(newopt) {
+        hal.stream.write(",ETH");
+#if FTP_ENABLE
+        hal.stream.write(",FTP");
+#endif
+    } else {
         hal.stream.write("[IP:");
         hal.stream.write(enet_ip_address());
         hal.stream.write("]\r\n");
@@ -123,6 +127,10 @@ void lwIPHostTimerHandler (void)
 #if TELNET_ENABLE
     if(services.telnet)
         TCPStreamPoll();
+#endif
+#if FTP_ENABLE
+    if(services.ftp)
+        ftpd_poll();
 #endif
 #if WEBSOCKET_ENABLE
     if(services.websocket)
@@ -155,6 +163,12 @@ void setupServices (void *pvArg)
         WsStreamInit();
         WsStreamListen(network.websocket_port == 0 ? 80 : network.websocket_port);
         services.websocket = On;
+    }
+#endif
+#if FTP_ENABLE
+    if(network.services.ftp && !services.ftp) {
+        ftpd_init();
+        services.ftp = On;
     }
 #endif
 }
@@ -226,28 +240,6 @@ bool enet_start (void)
     return true;
 }
 
-//*****************************************************************************
-//
-// This hook is called by FreeRTOS when memory allocation failure is detected.
-//
-//*****************************************************************************
-
-void vApplicationMallocFailedHook()
-{
-    while(true);
-}
-
-//*****************************************************************************
-//
-// This hook is called by FreeRTOS when an stack overflow error is detected.
-//
-//*****************************************************************************
-
-void vApplicationStackOverflowHook(xTaskHandle *pxTask, signed char *pcTaskName)
-{
-    while(true);
-}
-
 static void ethernet_settings_load (void);
 static void ethernet_settings_restore (void);
 static status_code_t ethernet_set_ip (setting_id_t setting, char *value);
@@ -257,14 +249,21 @@ static const setting_group_detail_t ethernet_groups [] = {
     { Group_Root, Group_Networking, "Networking" }
 };
 
+#if TELNET_ENABLE && WEBSOCKET_ENABLE && FTP_ENABLE
+static const char netservices[] = "Telnet,Websocket,FTP";
+static const char servicemap[] = "11";
+#endif
 #if TELNET_ENABLE && WEBSOCKET_ENABLE && HTTP_ENABLE
 static const char netservices[] = "Telnet,Websocket,HTTP";
+static const char servicemap[] = "7";
 #endif
-#if TELNET_ENABLE && WEBSOCKET_ENABLE && !HTTP_ENABLE
+#if TELNET_ENABLE && WEBSOCKET_ENABLE && !FTP_ENABLE && !HTTP_ENABLE
 static const char netservices[] = "Telnet,Websocket";
+static const char servicemap[] = "2";
 #endif
 #if TELNET_ENABLE && !WEBSOCKET_ENABLE && !HTTP_ENABLE
 static const char netservices[] = "Telnet";
+static const char servicemap[] = "1";
 #endif
 
 static const setting_detail_t ethernet_settings[] = {
@@ -389,6 +388,10 @@ static void ethernet_settings_restore (void)
 
 #if TELNET_ENABLE
     ethernet.services.telnet = On;
+#endif
+
+#if FTP_ENABLE
+    ethernet.services.ftp = On;
 #endif
 
 #if HTTP_ENABLE

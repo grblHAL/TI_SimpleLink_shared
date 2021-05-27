@@ -274,7 +274,7 @@ static void I2C_interrupt_handler (void)
             i2c.state = I2CState_Idle;
           #if KEYPAD_ENABLE
             if(i2c.keycode_callback) {
-                  //  if(GPIOIntStatus(KEYINTR_PORT, KEYINTR_PIN) != 0) { // only add keycode when key is still pressed
+                  //  if(GPIOIntStatus(KEYINTR_PORT, KEYINTR_BIT) != 0) { // only add keycode when key is still pressed
                 i2c.keycode_callback(*i2c.data);
                 i2c.keycode_callback = NULL;
             }

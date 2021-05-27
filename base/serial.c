@@ -21,7 +21,6 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "driver.h"
 #include "serial.h"
 
 static void uart_interrupt_handler (void);
