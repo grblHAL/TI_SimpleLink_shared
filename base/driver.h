@@ -57,13 +57,13 @@
 #ifndef ETHERNET_ENABLE
 #define ETHERNET_ENABLE         0
 #endif
-#ifndef TELNET_ENABLE
-#define TELNET_ENABLE           0
-#elif !SDCARD_ENABLE
-#undef TELNET_ENABLE
-#endif
 #ifndef FTP_ENABLE
 #define FTP_ENABLE              0
+#elif SDCARD_ENABLE < 2
+#undef FTP_ENABLE
+#endif
+#ifndef TELNET_ENABLE
+#define TELNET_ENABLE           0
 #endif
 #ifndef WEBSOCKET_ENABLE
 #define WEBSOCKET_ENABLE        0
@@ -97,8 +97,8 @@
 #define CNC_BOOSTERPACK  0
 #define CNC_BOOSTERPACK2 0
 
-#if (TELNET_ENABLE || WEBSOCKET_ENABLE) && !ETHERNET_ENABLE
-#error "Telnet and/or websocket protocols requires ethernet enabled!"
+#if (TELNET_ENABLE || WEBSOCKET_ENABLE || FTP_ENABLE) && !ETHERNET_ENABLE
+#error "Networking protocols requires ethernet enabled!"
 #endif
 
 #ifdef BOARD_CNC_BOOSTERPACK
@@ -252,7 +252,6 @@ typedef struct {
     } pins;
 } pin_group_pins_t;
 
-void selectStream (stream_type_t stream);
 #ifdef HAS_BOARD_INIT
 void board_init(pin_group_pins_t *aux_inputs, pin_group_pins_t *aux_outputs);
 #endif

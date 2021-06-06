@@ -103,40 +103,11 @@ static void enetStreamWriteS (const char *data)
     serialWriteS(data);
 }
 
-  #if TELNET_ENABLE
-    const io_stream_t ethernet_stream = {
-        .type = StreamType_Telnet,
-        .read = TCPStreamGetC,
-        .write = TCPStreamWriteS,
-        .write_all = enetStreamWriteS,
-        .write_char = TCPStreamPutC,
-        .get_rx_buffer_available = TCPStreamRxFree,
-        .reset_read_buffer = TCPStreamRxFlush,
-        .cancel_read_buffer = TCPStreamRxCancel,
-        .suspend_read = TCPStreamSuspendInput,
-        .enqueue_realtime_command = protocol_enqueue_realtime_command
-    };
-  #endif
-
-  #if WEBSOCKET_ENABLE
-    const io_stream_t websocket_stream = {
-        .type = StreamType_WebSocket,
-        .read = WsStreamGetC,
-        .write = WsStreamWriteS,
-        .write_all = enetStreamWriteS,
-        .write_char = WsStreamPutC,
-        .get_rx_buffer_available = WsStreamRxFree,
-        .reset_read_buffer = WsStreamRxFlush,
-        .cancel_read_buffer = WsStreamRxCancel,
-        .suspend_read = WsStreamSuspendInput,
-        .enqueue_realtime_command = protocol_enqueue_realtime_command
-    };
-  #endif
-
 #endif // ETHERNET_ENABLE
 
 const io_stream_t serial_stream = {
     .type = StreamType_Serial,
+    .connected = true,
     .read = serialGetC,
     .write = serialWriteS,
 #if ETHERNET_ENABLE
@@ -369,28 +340,36 @@ static probe_state_t probe = {
 
 #endif
 
-void selectStream (stream_type_t stream)
+static bool selectStream (const io_stream_t *stream)
 {
     static stream_type_t active_stream = StreamType_Serial;
 
-    switch(stream) {
+    if(!stream)
+        stream = &serial_stream;
+
+    memcpy(&hal.stream, stream, sizeof(io_stream_t));
+
+    if(!hal.stream.write_all)
+        hal.stream.write_all = enetStreamWriteS;
+
+    if(!hal.stream.enqueue_realtime_command)
+        hal.stream.enqueue_realtime_command = protocol_enqueue_realtime_command;
+
+    switch(stream->type) {
 
 #if TELNET_ENABLE
         case StreamType_Telnet:
             hal.stream.write_all("[MSG:TELNET STREAM ACTIVE]" ASCII_EOL);
-            memcpy(&hal.stream, &ethernet_stream, sizeof(io_stream_t));
             services.telnet = On;
             break;
 #endif
 #if WEBSOCKET_ENABLE
         case StreamType_WebSocket:
             hal.stream.write_all("[MSG:WEBSOCKET STREAM ACTIVE]" ASCII_EOL);
-            memcpy(&hal.stream, &websocket_stream, sizeof(io_stream_t));
             services.websocket = On;
             break;
 #endif
         case StreamType_Serial:
-            memcpy(&hal.stream, &serial_stream, sizeof(io_stream_t));
 #if ETHERNET_ENABLE
             services.mask = 0;
 #endif
@@ -402,7 +381,9 @@ void selectStream (stream_type_t stream)
             break;
     }
 
-    active_stream = stream;
+    active_stream = hal.stream.type;
+
+    return stream->type == hal.stream.type;
 }
 
 static void spindle_set_speed (uint_fast16_t pwm_value);
@@ -1209,7 +1190,7 @@ static void disable_irq (void)
 
 static void modeSelect (bool mpg_mode)
 {
-    static stream_type_t normal_stream = StreamType_Serial;
+    static io_stream_t *normal_stream = (io_stream_t *)&serial_stream;
 
     // Deny entering MPG mode if busy
     if(mpg_mode == sys.mpg_mode || (mpg_mode && (gc_state.file_run || !(state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP)))))) {
@@ -1220,13 +1201,13 @@ static void modeSelect (bool mpg_mode)
     serialSelect(mpg_mode);
 
     if(mpg_mode) {
-        normal_stream = hal.stream.type;
+        normal_stream = &hal.stream;
         hal.stream.read = serial2GetC;
         hal.stream.get_rx_buffer_available = serial2RxFree;
         hal.stream.cancel_read_buffer = serial2RxCancel;
         hal.stream.reset_read_buffer = serial2RxFlush;
     } else
-        selectStream(normal_stream);
+        hal.stream_select(normal_stream);
 
     hal.stream.reset_read_buffer();
 
@@ -1790,7 +1771,8 @@ bool driver_init (void)
 
     hal.control.get_state = systemGetState;
 
-    selectStream(StreamType_Serial);
+    hal.stream_select = selectStream;
+    hal.stream_select(&serial_stream);
 
     eeprom_init();
 

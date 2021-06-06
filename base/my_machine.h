@@ -26,8 +26,8 @@
 // Configuration
 // Uncomment to enable.
 
-#define ETHERNET_ENABLE    1 // Ethernet streaming. Requires networking plugin.
-#define SDCARD_ENABLE      1 // Run gcode programs from SD card, requires sdcard plugin.
+#define ETHERNET_ENABLE      1 // Ethernet streaming. Requires networking plugin.
+//#define SDCARD_ENABLE      1 // Run gcode programs from SD card, requires sdcard plugin.
 //#define KEYPAD_ENABLE      1 // I2C keypad for jogging etc., requires keypad plugin.
 //#define PWM_RAMPED         1 // Ramped spindle PWM.
 //#define LASER_PPI          1 // Laser PPI (Pulses Per Inch) option.
@@ -42,7 +42,7 @@
 
 #if ETHERNET_ENABLE
 #define TELNET_ENABLE           1 // Telnet daemon - requires Ethernet streaming enabled.
-#define FTP_ENABLE              1 // Ftp daemon - requires SD card enabled.
+#define FTP_ENABLE              1 // Ftp daemon - requires SD card write enabled (2).
 #define WEBSOCKET_ENABLE        1 // Websocket daemon - requires Ethernet streaming enabled.
 #define NETWORK_HOSTNAME        "GRBL"
 #define NETWORK_IPMODE          1 // do not change! Cannot get static mode to work!
