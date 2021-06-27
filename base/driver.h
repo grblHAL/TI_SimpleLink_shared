@@ -45,47 +45,10 @@
 #include "my_machine.h"
 #endif
 
-#include "grbl/hal.h"
-#include "grbl/nuts_bolts.h"
-#include "grbl/crossbar.h"
+#include "grbl/driver_opts.h"
 
 #define FreeRTOS
 
-#ifndef SDCARD_ENABLE
-#define SDCARD_ENABLE           0
-#endif
-#ifndef ETHERNET_ENABLE
-#define ETHERNET_ENABLE         0
-#endif
-#ifndef FTP_ENABLE
-#define FTP_ENABLE              0
-#elif SDCARD_ENABLE < 2
-#undef FTP_ENABLE
-#endif
-#ifndef TELNET_ENABLE
-#define TELNET_ENABLE           0
-#endif
-#ifndef WEBSOCKET_ENABLE
-#define WEBSOCKET_ENABLE        0
-#endif
-#ifndef KEYPAD_ENABLE
-#define KEYPAD_ENABLE           0
-#endif
-#ifndef PWM_RAMPED
-#define PWM_RAMPED              0
-#endif
-#ifndef LASER_PPI
-#define LASER_PPI               0
-#endif
-#ifndef TRINAMIC_ENABLE
-#define TRINAMIC_ENABLE         0
-#endif
-#ifndef TRINAMIC_I2C
-#define TRINAMIC_I2C            0
-#endif
-#ifndef TRINAMIC_DEV
-#define TRINAMIC_DEV            0
-#endif
 #ifndef CNC_BOOSTERPACK_SHORTS
 #define CNC_BOOSTERPACK_SHORTS  0
 #endif

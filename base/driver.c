@@ -86,6 +86,11 @@ static uint16_t step_prescaler[3] = {
 
 #define STEPPER_PULSE_PRESCALER (12 - 1)
 
+static const io_stream_t *serial_stream;
+#if MPG_MODE_ENABLE
+static const io_stream_t *mpg_stream;
+#endif
+
 #if ETHERNET_ENABLE
 
 static network_services_t services = {0};
@@ -100,33 +105,10 @@ static void enetStreamWriteS (const char *data)
     if(services.websocket)
         WsStreamWriteS(data);
 #endif
-    serialWriteS(data);
+    serial_stream->write(data);
 }
 
 #endif // ETHERNET_ENABLE
-
-const io_stream_t serial_stream = {
-    .type = StreamType_Serial,
-    .connected = true,
-    .read = serialGetC,
-    .write = serialWriteS,
-#if ETHERNET_ENABLE
-    .write_all = enetStreamWriteS,
-#else
-    .write_all = serialWriteS,
-#endif
-    .write_char = serialPutC,
-    .get_rx_buffer_available = serialRxFree,
-    .reset_read_buffer = serialRxFlush,
-    .cancel_read_buffer = serialRxCancel,
-    .enqueue_realtime_command = protocol_enqueue_realtime_command,
-#if M6_ENABLE
-    .suspend_read = serialSuspendInput
-#else
-    .suspend_read = NULL
-#endif
-};
-
 
 #if PWM_RAMPED
 
@@ -345,12 +327,17 @@ static bool selectStream (const io_stream_t *stream)
     static stream_type_t active_stream = StreamType_Serial;
 
     if(!stream)
-        stream = &serial_stream;
+        stream = serial_stream;
 
     memcpy(&hal.stream, stream, sizeof(io_stream_t));
 
+#if ETHERNET_ENABLE
     if(!hal.stream.write_all)
         hal.stream.write_all = enetStreamWriteS;
+#else
+    if(!hal.stream.write_all)
+        hal.stream.write_all = hal.stream.write;
+#endif
 
     if(!hal.stream.enqueue_realtime_command)
         hal.stream.enqueue_realtime_command = protocol_enqueue_realtime_command;
@@ -1190,7 +1177,7 @@ static void disable_irq (void)
 
 static void modeSelect (bool mpg_mode)
 {
-    static io_stream_t *normal_stream = (io_stream_t *)&serial_stream;
+    static const io_stream_t *normal_stream = NULL;
 
     // Deny entering MPG mode if busy
     if(mpg_mode == sys.mpg_mode || (mpg_mode && (gc_state.file_run || !(state_get() == STATE_IDLE || (state_get() & (STATE_ALARM|STATE_ESTOP)))))) {
@@ -1198,16 +1185,21 @@ static void modeSelect (bool mpg_mode)
         return;
     }
 
-    serialSelect(mpg_mode);
-
     if(mpg_mode) {
         normal_stream = &hal.stream;
-        hal.stream.read = serial2GetC;
-        hal.stream.get_rx_buffer_available = serial2RxFree;
-        hal.stream.cancel_read_buffer = serial2RxCancel;
-        hal.stream.reset_read_buffer = serial2RxFlush;
-    } else
-        hal.stream_select(normal_stream);
+        if(hal.stream.disable)
+            hal.stream.disable(true);
+        mpg_stream->disable(false);
+        hal.stream.read = mpg_stream->read;
+        hal.stream.get_rx_buffer_free = mpg_stream->get_rx_buffer_free;
+        hal.stream.cancel_read_buffer = mpg_stream->cancel_read_buffer;
+        hal.stream.reset_read_buffer = mpg_stream->reset_read_buffer;
+    } else {
+        mpg_stream->disable(true);
+        hal.stream_select(normal_stream ? normal_stream : serial_stream);
+        if(hal.stream.disable)
+            hal.stream.disable(false);
+    }
 
     hal.stream.reset_read_buffer();
 
@@ -1708,8 +1700,6 @@ bool driver_init (void)
 //    HibernateDisable();
 #endif
 
-    serialInit();
-
 #if I2C_ENABLE
     I2CInit();
 #endif
@@ -1730,7 +1720,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "210526";
+    hal.driver_version = "210626";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1771,8 +1761,10 @@ bool driver_init (void)
 
     hal.control.get_state = systemGetState;
 
+    serial_stream = serialInit();
+
     hal.stream_select = selectStream;
-    hal.stream_select(&serial_stream);
+    hal.stream_select(serial_stream);
 
     eeprom_init();
 
@@ -1820,6 +1812,10 @@ bool driver_init (void)
     hal.driver_cap.probe_pull_up = On;
 #if LASER_PPI
     hal.driver_cap.laser_ppi_mode = On;
+#endif
+#if MPG_MODE_ENABLE
+    hal.driver_cap.mpg_mode = On;
+    mpg_stream = serial2Init();
 #endif
 
     uint32_t i;

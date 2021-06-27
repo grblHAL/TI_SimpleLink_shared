@@ -33,8 +33,130 @@ static stream_rx_buffer_t rx2buf;
 static void uart2_interrupt_handler (void);
 #endif
 
-void serialInit (void)
+//
+// serialGetC - returns -1 if no data available
+//
+static int16_t serialGetC (void)
 {
+    char c;
+    uint_fast16_t bptr = rxbuffer.tail;
+
+    if(bptr == rxbuffer.head)
+        return -1; // no data available else EOF
+
+//    UARTIntDisable(SERIAL1_PORT, UART_INT_RX|UART_INT_RT);
+    c = rxbuffer.data[bptr++];                      // Get next character, increment tmp pointer
+    rxbuffer.tail = bptr & (RX_BUFFER_SIZE - 1);    // and update pointer
+
+//    UARTIntEnable(SERIAL1_PORT, UART_INT_RX|UART_INT_RT);
+ #ifdef RTS_PORT
+    if (rxbuffer.rts_state && BUFCOUNT(rxbuffer.head, rxbuffer.tail, RX_BUFFER_SIZE) < RX_BUFFER_LWM)   // Clear RTS if
+        GPIOPinWrite(RTS_PORT, RTS_PIN, rxbuffer.rts_state = 0);                                        // buffer count is below low water mark
+ #endif
+    return (int16_t)c;
+}
+
+static inline uint16_t serialRxCount (void)
+{
+    uint16_t head = rxbuffer.head, tail = rxbuffer.tail;
+
+    return BUFCOUNT(head, tail, RX_BUFFER_SIZE);
+}
+
+static uint16_t serialRxFree (void)
+{
+    uint_fast16_t head = rxbuffer.head, tail = rxbuffer.tail;
+
+    return (RX_BUFFER_SIZE - 1) - BUFCOUNT(head, tail, RX_BUFFER_SIZE);
+}
+
+static void serialRxFlush (void)
+{
+    rxbuffer.tail = rxbuffer.head;
+ #ifdef RTS_PORT
+    GPIOPinWrite(RTS_PORT, RTS_PIN, rxbuffer.rts_state = 0);
+ #endif
+}
+
+static void serialRxCancel (void)
+{
+    rxbuffer.data[rxbuffer.head] = ASCII_CAN;
+    rxbuffer.tail = rxbuffer.head;
+    rxbuffer.head = (rxbuffer.tail + 1) & (RX_BUFFER_SIZE - 1);
+ #ifdef RTS_PORT
+    GPIOPinWrite(RTS_PORT, RTS_PIN, rxbuffer.rts_state = 0);
+ #endif
+}
+
+static bool serialPutC (const char c)
+{
+    uint32_t next_head;
+
+    if(txbuffer.head != txbuffer.tail || !UARTCharPutNonBlocking(SERIAL1_BASE, c)) {  // Send character without buffering if possible
+
+        next_head = (txbuffer.head + 1) & (TX_BUFFER_SIZE - 1);           // Get and update head pointer
+
+        while(txbuffer.tail == next_head) {                               // Buffer full, block until space is available...
+            if(!hal.stream_blocking_callback())
+                return false;
+        }
+
+        txbuffer.data[txbuffer.head] = c;                                         // Add data to buffer
+        txbuffer.head = next_head;                                        // and update head pointer
+
+        UARTIntEnable(SERIAL1_BASE, UART_INT_TX); // Enable interrupts
+    }
+
+    return true;
+}
+
+static void serialWriteS (const char *data)
+{
+    char c, *ptr = (char *)data;
+
+    while((c = *ptr++) != '\0')
+        serialPutC(c);
+}
+
+static bool serialSuspendInput (bool suspend)
+{
+    return stream_rx_suspend(&rxbuffer, suspend);
+}
+
+uint16_t serialTxCount (void)
+{
+    uint_fast16_t head = txbuffer.head, tail = txbuffer.tail;
+
+    return BUFCOUNT(head, tail, TX_BUFFER_SIZE);
+}
+
+static bool serialDisable (bool disable)
+{
+    if(disable)
+        UARTIntDisable(SERIAL1_BASE, UART_INT_RX|UART_INT_RT);
+    else
+        UARTIntEnable(SERIAL1_BASE, UART_INT_RX|UART_INT_RT);
+
+    return true;
+}
+
+const io_stream_t *serialInit (void)
+{
+    static const io_stream_t stream = {
+        .type = StreamType_Serial,
+        .connected = true,
+        .read = serialGetC,
+        .write = serialWriteS,
+        .write_char = serialPutC,
+        .write_all = serialWriteS,
+        .get_rx_buffer_free = serialRxFree,
+        .get_rx_buffer_count = serialRxCount,
+        .reset_read_buffer = serialRxFlush,
+        .cancel_read_buffer = serialRxCancel,
+        .suspend_read = serialSuspendInput,
+        .disable = serialDisable
+    };
+
     SysCtlPeripheralEnable(SERIAL1_PERIPH);
     SysCtlPeripheralEnable(SERIAL1_SYSCTL);
     SysCtlDelay(3);
@@ -71,126 +193,7 @@ void serialInit (void)
 
 #endif
 
-#ifdef SERIAL2_MOD
-
-    SysCtlPeripheralEnable(SERIAL2_PERIPH);
-    SysCtlPeripheralEnable(SERIAL2_SYSCTL);
-    SysCtlDelay(3);
-
-    GPIOPinConfigure(SERIAL2_RX);
-    GPIOPinConfigure(SERIAL2_TX);
-    GPIOPinTypeUART(SERIAL2_PORT, SERIAL2_PINS);
-
-  #ifdef __MSP432E401Y__
-    UARTClockSourceSet(SERIAL2_BASE, UART_CLOCK_SYSTEM);
-    UARTConfigSetExpClk(SERIAL2_BASE, 120000000UL, 115200UL, (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
-  #else // TM4C1294
-    UARTClockSourceSet(SERIAL2_BASE, UART_CLOCK_PIOSC);
-    UARTConfigSetExpClk(SERIAL2_BASE, 16000000UL, 115200UL, (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
-  #endif
-    UARTFIFOEnable(SERIAL2_BASE);
-    UARTFIFOLevelSet(SERIAL2_BASE, UART_FIFO_TX1_8, UART_FIFO_RX1_8);
-    IntPrioritySet(SERIAL2_INT, 0x40);
-    UARTIntRegister(SERIAL2_BASE, uart2_interrupt_handler);
-    UARTEnable(SERIAL2_BASE);
-#endif
-}
-
-//
-// serialGetC - returns -1 if no data available
-//
-int16_t serialGetC (void)
-{
-    char c;
-    uint_fast16_t bptr = rxbuffer.tail;
-
-    if(bptr == rxbuffer.head)
-        return -1; // no data available else EOF
-
-//    UARTIntDisable(SERIAL1_PORT, UART_INT_RX|UART_INT_RT);
-    c = rxbuffer.data[bptr++];                      // Get next character, increment tmp pointer
-    rxbuffer.tail = bptr & (RX_BUFFER_SIZE - 1);    // and update pointer
-
-//    UARTIntEnable(SERIAL1_PORT, UART_INT_RX|UART_INT_RT);
- #ifdef RTS_PORT
-    if (rxbuffer.rts_state && BUFCOUNT(rxbuffer.head, rxbuffer.tail, RX_BUFFER_SIZE) < RX_BUFFER_LWM)   // Clear RTS if
-        GPIOPinWrite(RTS_PORT, RTS_PIN, rxbuffer.rts_state = 0);                                        // buffer count is below low water mark
- #endif
-    return (int16_t)c;
-}
-
-inline uint16_t serialRxCount (void)
-{
-    uint16_t head = rxbuffer.head, tail = rxbuffer.tail;
-
-    return BUFCOUNT(head, tail, RX_BUFFER_SIZE);
-}
-
-uint16_t serialRxFree (void)
-{
-    uint_fast16_t head = rxbuffer.head, tail = rxbuffer.tail;
-
-    return (RX_BUFFER_SIZE - 1) - BUFCOUNT(head, tail, RX_BUFFER_SIZE);
-}
-
-void serialRxFlush (void)
-{
-    rxbuffer.tail = rxbuffer.head;
- #ifdef RTS_PORT
-    GPIOPinWrite(RTS_PORT, RTS_PIN, rxbuffer.rts_state = 0);
- #endif
-}
-
-void serialRxCancel (void)
-{
-    rxbuffer.data[rxbuffer.head] = ASCII_CAN;
-    rxbuffer.tail = rxbuffer.head;
-    rxbuffer.head = (rxbuffer.tail + 1) & (RX_BUFFER_SIZE - 1);
- #ifdef RTS_PORT
-    GPIOPinWrite(RTS_PORT, RTS_PIN, rxbuffer.rts_state = 0);
- #endif
-}
-
-bool serialPutC (const char c)
-{
-    uint32_t next_head;
-
-    if(txbuffer.head != txbuffer.tail || !UARTCharPutNonBlocking(SERIAL1_BASE, c)) {  // Send character without buffering if possible
-
-        next_head = (txbuffer.head + 1) & (TX_BUFFER_SIZE - 1);           // Get and update head pointer
-
-        while(txbuffer.tail == next_head) {                               // Buffer full, block until space is available...
-            if(!hal.stream_blocking_callback())
-                return false;
-        }
-
-        txbuffer.data[txbuffer.head] = c;                                         // Add data to buffer
-        txbuffer.head = next_head;                                        // and update head pointer
-
-        UARTIntEnable(SERIAL1_BASE, UART_INT_TX); // Enable interrupts
-    }
-
-    return true;
-}
-
-void serialWriteS (const char *data)
-{
-    char c, *ptr = (char *)data;
-
-    while((c = *ptr++) != '\0')
-        serialPutC(c);
-}
-
-bool serialSuspendInput (bool suspend)
-{
-    return stream_rx_suspend(&rxbuffer, suspend);
-}
-
-uint16_t serialTxCount (void)
-{
-    uint_fast16_t head = txbuffer.head, tail = txbuffer.tail;
-
-    return BUFCOUNT(head, tail, TX_BUFFER_SIZE);
+    return &stream;
 }
 
 static void uart_interrupt_handler (void)
@@ -247,21 +250,10 @@ static void uart_interrupt_handler (void)
 
 #ifdef SERIAL2_MOD
 
-void serialSelect (bool mpg)
-{
-    if(mpg) {
-        UARTIntDisable(SERIAL1_BASE, UART_INT_RX|UART_INT_RT);
-        UARTIntEnable(SERIAL2_BASE, UART_INT_RX|UART_INT_RT);
-    } else {
-        UARTIntEnable(SERIAL1_BASE, UART_INT_RX|UART_INT_RT);
-        UARTIntDisable(SERIAL2_BASE, UART_INT_RX|UART_INT_RT);
-    }
-}
-
 //
 // Returns number of free characters in serial input buffer
 //
-uint16_t serial2RxFree (void)
+static uint16_t serial2RxFree (void)
 {
     uint_fast16_t tail = rx2buf.tail, head = rx2buf.head;
 
@@ -271,7 +263,7 @@ uint16_t serial2RxFree (void)
 //
 // Flushes the serial input buffer
 //
-void serial2RxFlush (void)
+static void serial2RxFlush (void)
 {
     rx2buf.head = rx2buf.tail;
 }
@@ -279,7 +271,7 @@ void serial2RxFlush (void)
 //
 // Flushes and adds a CAN character to the serial input buffer
 //
-void serial2RxCancel (void)
+static void serial2RxCancel (void)
 {
     rx2buf.data[rx2buf.head] = ASCII_CAN;
     rx2buf.tail = rx2buf.head;
@@ -289,7 +281,7 @@ void serial2RxCancel (void)
 //
 // serialGetC - returns -1 if no data available
 //
-int16_t serial2GetC (void)
+static int16_t serial2GetC (void)
 {
     uint_fast16_t bptr = rx2buf.tail;
 
@@ -300,6 +292,56 @@ int16_t serial2GetC (void)
     rx2buf.tail = bptr & (RX_BUFFER_SIZE - 1); // and update pointer
 
     return (int16_t)data;
+}
+
+static bool serial2Disable (bool disable)
+{
+    if(disable)
+        UARTIntDisable(SERIAL2_BASE, UART_INT_RX|UART_INT_RT);
+    else
+        UARTIntEnable(SERIAL2_BASE, UART_INT_RX|UART_INT_RT);
+
+    return true;
+}
+
+const io_stream_t *serial2Init (void)
+{
+    static const io_stream_t stream = {
+        .type = StreamType_Serial,
+        .connected = true,
+        .read = serial2GetC,
+        .write = serial2WriteS,
+        .write_char = serial2PutC,
+        .write_all = serial2WriteS,
+        .get_rx_buffer_free = serial2RxFree,
+        .reset_read_buffer = serial2RxFlush,
+        .cancel_read_buffer = serial2RxCancel,
+        .suspend_read = serial2SuspendInput,
+        .disable = serial2Disable
+    };
+
+    SysCtlPeripheralEnable(SERIAL2_PERIPH);
+    SysCtlPeripheralEnable(SERIAL2_SYSCTL);
+    SysCtlDelay(3);
+
+    GPIOPinConfigure(SERIAL2_RX);
+    GPIOPinConfigure(SERIAL2_TX);
+    GPIOPinTypeUART(SERIAL2_PORT, SERIAL2_PINS);
+
+  #ifdef __MSP432E401Y__
+    UARTClockSourceSet(SERIAL2_BASE, UART_CLOCK_SYSTEM);
+    UARTConfigSetExpClk(SERIAL2_BASE, 120000000UL, 115200UL, (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
+  #else // TM4C1294
+    UARTClockSourceSet(SERIAL2_BASE, UART_CLOCK_PIOSC);
+    UARTConfigSetExpClk(SERIAL2_BASE, 16000000UL, 115200UL, (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
+  #endif
+    UARTFIFOEnable(SERIAL2_BASE);
+    UARTFIFOLevelSet(SERIAL2_BASE, UART_FIFO_TX1_8, UART_FIFO_RX1_8);
+    IntPrioritySet(SERIAL2_INT, 0x40);
+    UARTIntRegister(SERIAL2_BASE, uart2_interrupt_handler);
+    UARTEnable(SERIAL2_BASE);
+
+    return &stream;
 }
 
 static void uart2_interrupt_handler (void)
