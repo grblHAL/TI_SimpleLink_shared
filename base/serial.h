@@ -111,9 +111,7 @@
 
 const io_stream_t *serialInit (void);
 
-#if MPG_MODE_ENABLE
 #ifdef SERIAL2_MOD
-#endif
 
 #define SERIAL2 7
 #define SERIAL2_SYSCTL uartSysctl(SERIAL2)

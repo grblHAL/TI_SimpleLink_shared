@@ -310,13 +310,13 @@ const io_stream_t *serial2Init (void)
         .type = StreamType_Serial,
         .connected = true,
         .read = serial2GetC,
-        .write = serial2WriteS,
-        .write_char = serial2PutC,
-        .write_all = serial2WriteS,
+//        .write = serial2WriteS,
+//        .write_char = serial2PutC,
+//        .write_all = serial2WriteS,
         .get_rx_buffer_free = serial2RxFree,
         .reset_read_buffer = serial2RxFlush,
         .cancel_read_buffer = serial2RxCancel,
-        .suspend_read = serial2SuspendInput,
+//        .suspend_read = serial2SuspendInput,
         .disable = serial2Disable
     };
 

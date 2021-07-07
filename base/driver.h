@@ -81,7 +81,9 @@
 
 // End configuration
 
-//#define SERIAL2_MOD
+#if MPG_MODE_ENABLE
+#define SERIAL2_MOD
+#endif
 
 #if KEYPAD_ENABLE || (TRINAMIC_ENABLE && TRINAMIC_I2C)
 #define I2C_ENABLE 1
@@ -113,6 +115,14 @@
 #define timerI(t, i) INT_TIMER ## t ## i ## _TM4C129
 #else
 #define timerI(t, i) INT_TIMER ## t ## i
+#endif
+
+#ifdef __MSP432E401Y__
+#define DIGITAL_IN(port, pin) HWREGBITW(&((GPIO_Type *)port)->DATA, pin)
+#define DIGITAL_OUT(port, pin, on) { HWREGBITW(&((GPIO_Type *)port)->DATA, pin) = on; }
+#else
+#define DIGITAL_IN(port, pin) !!GPIOPinRead(port, 1<<pin)
+#define DIGITAL_OUT(port, pin, on) GPIOPinWrite(port, 1<<pin, (on) ? 1<<pin : 0);
 #endif
 
 // Define GPIO output mode options
@@ -171,33 +181,52 @@ void laser_ppi_mode (bool on);
 
 #endif
 
-#ifndef STEP_PORT_X
-#define STEP_PORT_X STEP_PORT
+#ifndef X_STEP_PORT
+#define X_STEP_PORT STEP_PORT
 #endif
-#ifndef STEP_PORT_Y
-#define STEP_PORT_Y STEP_PORT
+#ifndef Y_STEP_PORT
+#define Y_STEP_PORT STEP_PORT
 #endif
-#ifndef STEP_PORT_Z
-#define STEP_PORT_Z STEP_PORT
+#ifndef Z_STEP_PORT
+#define Z_STEP_PORT STEP_PORT
 #endif
-#ifndef DIRECTION_PORT_X
-#define DIRECTION_PORT_X DIRECTION_PORT
+#ifndef X_DIRECTION_PORT
+#define X_DIRECTION_PORT DIRECTION_PORT
 #endif
-#ifndef DIRECTION_PORT_Y
-#define DIRECTION_PORT_Y DIRECTION_PORT
+#ifndef Y_DIRECTION_PORT
+#define Y_DIRECTION_PORT DIRECTION_PORT
 #endif
-#ifndef DIRECTION_PORT_Z
-#define DIRECTION_PORT_Z DIRECTION_PORT
+#ifndef Z_DIRECTION_PORT
+#define Z_DIRECTION_PORT DIRECTION_PORT
+#endif
+
+#ifdef CONTROL_PORT
+#ifndef RESET_PORT
+#define RESET_PORT          CONTROL_PORT
+#endif
+#ifndef FEED_HOLD_PORT
+#define FEED_HOLD_PORT      CONTROL_PORT
+#endif
+#ifndef CYCLE_START_PORT
+#define CYCLE_START_PORT    CONTROL_PORT
+#endif
+#ifndef SAFETY_DOOR_PORT
+#define SAFETY_DOOR_PORT    CONTROL_PORT
+#endif
 #endif
 
 typedef struct {
     pin_function_t id;
     uint32_t port;
     uint8_t pin;
+    uint32_t bit;
     pin_group_t group;
     volatile bool active;
     volatile bool debounce;
     pin_irq_mode_t irq_mode;
+    pin_mode_t cap;
+    ioport_interrupt_callback_ptr interrupt_callback;
+    const char *description;
 } input_signal_t;
 
 typedef struct {
@@ -205,6 +234,7 @@ typedef struct {
     uint32_t port;
     uint8_t pin;
     pin_group_t group;
+    const char *description;
 } output_signal_t;
 
 typedef struct {
@@ -217,6 +247,11 @@ typedef struct {
 
 #ifdef HAS_BOARD_INIT
 void board_init(pin_group_pins_t *aux_inputs, pin_group_pins_t *aux_outputs);
+#endif
+
+#ifdef HAS_IOPORTS
+void ioports_init(pin_group_pins_t *aux_inputs, pin_group_pins_t *aux_outputs);
+void ioports_event (input_signal_t *input);
 #endif
 
 #endif
