@@ -22,14 +22,17 @@
 */
 
 #include "serial.h"
+#include "grbl/protocol.h"
 
 static void uart_interrupt_handler (void);
 
 static stream_tx_buffer_t txbuffer = {0};
 static stream_rx_buffer_t rxbuffer = {0};
+static enqueue_realtime_command_ptr enqueue_realtime_command = protocol_enqueue_realtime_command;
 
 #ifdef SERIAL2_MOD
 static stream_rx_buffer_t rx2buf;
+static enqueue_realtime_command_ptr enqueue_realtime_command2 = protocol_enqueue_realtime_command;
 static void uart2_interrupt_handler (void);
 #endif
 
@@ -140,6 +143,16 @@ static bool serialDisable (bool disable)
     return true;
 }
 
+static enqueue_realtime_command_ptr serialSetRtHandler (enqueue_realtime_command_ptr handler)
+{
+    enqueue_realtime_command_ptr prev = enqueue_realtime_command;
+
+    if(handler)
+        enqueue_realtime_command = handler;
+
+    return prev;
+}
+
 const io_stream_t *serialInit (void)
 {
     static const io_stream_t stream = {
@@ -154,7 +167,8 @@ const io_stream_t *serialInit (void)
         .reset_read_buffer = serialRxFlush,
         .cancel_read_buffer = serialRxCancel,
         .suspend_read = serialSuspendInput,
-        .disable = serialDisable
+        .disable = serialDisable,
+        .set_enqueue_rt_handler = serialSetRtHandler
     };
 
     SysCtlPeripheralEnable(SERIAL1_PERIPH);
@@ -229,7 +243,7 @@ static void uart_interrupt_handler (void)
         if(c == CMD_TOOL_ACK && !rxbuffer.backup) {
             stream_rx_backup(&rxbuffer);
             hal.stream.read = serialGetC; // restore normal input
-        } else if(!hal.stream.enqueue_realtime_command((char)c)) {
+        } else if(!enqueue_realtime_command((char)c)) {
 
             bptr = (rxbuffer.head + 1) & (RX_BUFFER_SIZE - 1);  // Get next head pointer
 
@@ -304,6 +318,16 @@ static bool serial2Disable (bool disable)
     return true;
 }
 
+static enqueue_realtime_command_ptr serial2SetRtHandler (enqueue_realtime_command_ptr handler)
+{
+    enqueue_realtime_command_ptr prev = enqueue_realtime_command2;
+
+    if(handler)
+        enqueue_realtime_command2 = handler;
+
+    return prev;
+}
+
 const io_stream_t *serial2Init (void)
 {
     static const io_stream_t stream = {
@@ -317,7 +341,8 @@ const io_stream_t *serial2Init (void)
         .reset_read_buffer = serial2RxFlush,
         .cancel_read_buffer = serial2RxCancel,
 //        .suspend_read = serial2SuspendInput,
-        .disable = serial2Disable
+        .disable = serial2Disable,
+        .set_enqueue_rt_handler = serial2SetRtHandler
     };
 
     SysCtlPeripheralEnable(SERIAL2_PERIPH);
@@ -357,7 +382,7 @@ static void uart2_interrupt_handler (void)
             UARTCharGet(SERIAL2_BASE);                              // and do dummy read to clear interrupt;
         } else {
             int32_t c = UARTCharGet(SERIAL2_BASE);
-            if(!hal.stream.enqueue_realtime_command((char)c)) {
+            if(!enqueue_realtime_command2((char)c)) {
                 rx2buf.data[rx2buf.head] = (char)c; // Add data to buffer
                 rx2buf.head = bptr;                 // and update pointer
             }

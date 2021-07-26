@@ -405,8 +405,7 @@ static bool selectStream (const io_stream_t *stream)
         hal.stream.write_all = hal.stream.write;
 #endif
 
-    if(!hal.stream.enqueue_realtime_command)
-        hal.stream.enqueue_realtime_command = protocol_enqueue_realtime_command;
+    hal.stream.set_enqueue_rt_handler(protocol_enqueue_realtime_command);
 
     switch(stream->type) {
 
