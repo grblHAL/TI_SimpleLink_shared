@@ -941,7 +941,7 @@ inline static control_signals_t systemGetState (void)
     signals.reset = DIGITAL_IN(RESET_PORT, RESET_PIN);
     signals.feed_hold = DIGITAL_IN(FEED_HOLD_PORT, FEED_HOLD_PIN);
     signals.cycle_start = DIGITAL_IN(CYCLE_START_PORT, CYCLE_START_PIN);
-  #ifdef ENABLE_SAFETY_DOOR_INPUT_PIN
+  #if SAFETY_DOOR_ENABLE
     signals.safety_door_ajar = DIGITAL_IN(SAFETY_DOOR_PORT, SAFETY_DOOR_PIN);
   #endif
 
