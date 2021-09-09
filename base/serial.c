@@ -140,6 +140,11 @@ static bool serialDisable (bool disable)
     return true;
 }
 
+static bool serialEnqueueRtCommand (char c)
+{
+    return enqueue_realtime_command(c);
+}
+
 static enqueue_realtime_command_ptr serialSetRtHandler (enqueue_realtime_command_ptr handler)
 {
     enqueue_realtime_command_ptr prev = enqueue_realtime_command;
@@ -159,6 +164,7 @@ const io_stream_t *serialInit (void)
         .write = serialWriteS,
         .write_char = serialPutC,
         .write_all = serialWriteS,
+        .enqueue_rt_command = serialEnqueueRtCommand,
         .get_rx_buffer_free = serialRxFree,
         .get_rx_buffer_count = serialRxCount,
         .reset_read_buffer = serialRxFlush,
@@ -311,6 +317,11 @@ static bool serial2Disable (bool disable)
     return true;
 }
 
+static bool serial2EnqueueRtCommand (char c)
+{
+    return enqueue_realtime_command2(c);
+}
+
 static enqueue_realtime_command_ptr serial2SetRtHandler (enqueue_realtime_command_ptr handler)
 {
     enqueue_realtime_command_ptr prev = enqueue_realtime_command2;
@@ -330,6 +341,7 @@ const io_stream_t *serial2Init (void)
 //        .write = serial2WriteS,
 //        .write_char = serial2PutC,
 //        .write_all = serial2WriteS,
+        .enqueue_rt_command = serial2EnqueueRtCommand,
         .get_rx_buffer_free = serial2RxFree,
         .reset_read_buffer = serial2RxFlush,
         .cancel_read_buffer = serial2RxCancel,
