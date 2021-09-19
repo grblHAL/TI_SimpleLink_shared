@@ -119,7 +119,9 @@ void lwIPHostTimerHandler (void)
 
     if(isLinkUp != linkUp) {
         linkUp = isLinkUp;
+#if TELNET_ENABLE
         TCPStreamNotifyLinkStatus(linkUp);
+#endif
     }
 
 #if TELNET_ENABLE
@@ -156,17 +158,30 @@ void setupServices (void *pvArg)
         services.telnet = On;
     }
 #endif
-#if WEBSOCKET_ENABLE
-    if(network.services.websocket && !services.websocket) {
-        WsStreamInit();
-        WsStreamListen(network.websocket_port == 0 ? 80 : network.websocket_port);
-        services.websocket = On;
-    }
-#endif
+
 #if FTP_ENABLE
     if(network.services.ftp && !services.ftp) {
         ftpd_init();
         services.ftp = On;
+    }
+#endif
+
+#if HTTP_ENABLE
+    if(network.services.http && !services.http) {
+        httpd_init(network.http_port == 0 ? 80 : network.http_port);
+        services.http = On;
+    }
+#endif
+
+#if WEBSOCKET_ENABLE
+    if(network.services.websocket && !services.websocket) {
+        WsStreamInit();
+  #if HTTP_ENABLE
+        WsStreamListen(network.websocket_port == 0 ? 81 : network.websocket_port);
+  #else
+        WsStreamListen(network.websocket_port == 0 ? 80 : network.websocket_port);
+  #endif
+        services.websocket = On;
     }
 #endif
 }
@@ -257,10 +272,10 @@ static const setting_detail_t ethernet_settings[] = {
     { Setting_Gateway, Group_Networking, "Gateway", NULL, Format_IPv4, NULL, NULL, NULL, Setting_NonCoreFn, ethernet_set_ip, ethernet_get_ip, NULL },
     { Setting_NetMask, Group_Networking, "Netmask", NULL, Format_IPv4, NULL, NULL, NULL, Setting_NonCoreFn, ethernet_set_ip, ethernet_get_ip, NULL },
     { Setting_TelnetPort, Group_Networking, "Telnet port", NULL, Format_Int16, "####0", "1", "65535", Setting_NonCore, &ethernet.telnet_port, NULL, NULL },
-    { Setting_WebSocketPort, Group_Networking, "Websocket port", NULL, Format_Int16, "####0", "1", "65535", Setting_NonCore, &ethernet.websocket_port, NULL, NULL }
 #if HTTP_ENABLE
     { Setting_HttpPort, Group_Networking, "HTTP port", NULL, Format_Int16, "####0", "1", "65535", Setting_NonCore, &ethernet.http_port, NULL, NULL },
 #endif
+    { Setting_WebSocketPort, Group_Networking, "Websocket port", NULL, Format_Int16, "####0", "1", "65535", Setting_NonCore, &ethernet.websocket_port, NULL, NULL }
 };
 
 #ifndef NO_SETTINGS_DESCRIPTIONS

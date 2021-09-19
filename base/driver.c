@@ -1778,7 +1778,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "210908";
+    hal.driver_version = "210916";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1916,15 +1916,7 @@ bool driver_init (void)
     enet_init();
 #endif
 
-#if TRINAMIC_ENABLE
-    trinamic_init();
-#endif
-
-#if KEYPAD_ENABLE
-    keypad_init();
-#endif
-
-    my_plugin_init();
+#include "grbl/plugins_init.h"
 
     // no need to move version check before init - compiler will fail any signature mismatch for existing entries
     return hal.version == 8;

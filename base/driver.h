@@ -56,7 +56,7 @@
 #define CNC_BOOSTERPACK_A4998   0
 #endif
 
-#define M6_ENABLE        1 // Manual toolchange.
+#define M6_ENABLE        0 // Manual toolchange.
 #define CNC_BOOSTERPACK  0
 #define CNC_BOOSTERPACK2 0
 
