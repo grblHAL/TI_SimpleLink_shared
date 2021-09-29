@@ -43,10 +43,10 @@
 
 #if ETHERNET_ENABLE
 #if SDCARD_ENABLE
-#define FTP_ENABLE              1 // ftp daemon - requires SD card write enabled (2).
+//#define FTP_ENABLE              1 // ftp daemon - requires SD card write enabled (2).
+//#define HTTP_ENABLE             1 // http daemon - requires SD card write enabled (2).
 #endif
 #define TELNET_ENABLE           1 // Telnet daemon - requires Ethernet streaming enabled.
-#define HTTP_ENABLE             0 // http daemon - requires SD card write enabled (2).
 #define WEBSOCKET_ENABLE        1 // Websocket daemon - requires Ethernet streaming enabled.
 // The following symbols have the default values as shown, uncomment and change as needed.
 //#define NETWORK_HOSTNAME        "GRBL"
