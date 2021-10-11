@@ -27,6 +27,7 @@
 // Uncomment to enable.
 
 //#define WEBUI_ENABLE       1 // Enable ESP3D-WEBUI plugin along with networking and SD card plugins.
+//#define WEBUI_INFLASH      1 // Store WebUI files in flash instead of on SD card.
 //#define ETHERNET_ENABLE    1 // Ethernet streaming. Requires networking plugin.
 //#define SDCARD_ENABLE      1 // Run gcode programs from SD card, requires sdcard plugin.
 //#define KEYPAD_ENABLE      1 // I2C keypad for jogging etc., requires keypad plugin.
