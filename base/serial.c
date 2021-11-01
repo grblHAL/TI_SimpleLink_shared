@@ -170,7 +170,7 @@ const io_stream_t *serialInit (void)
         .reset_read_buffer = serialRxFlush,
         .cancel_read_buffer = serialRxCancel,
         .suspend_read = serialSuspendInput,
-        .disable = serialDisable,
+        .disable_rx = serialDisable,
         .set_enqueue_rt_handler = serialSetRtHandler
     };
 
@@ -346,7 +346,7 @@ const io_stream_t *serial2Init (void)
         .reset_read_buffer = serial2RxFlush,
         .cancel_read_buffer = serial2RxCancel,
 //        .suspend_read = serial2SuspendInput,
-        .disable = serial2Disable,
+        .disable_rx = serial2Disable,
         .set_enqueue_rt_handler = serial2SetRtHandler
     };
 

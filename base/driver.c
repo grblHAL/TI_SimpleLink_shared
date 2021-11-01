@@ -405,8 +405,6 @@ static bool selectStream (const io_stream_t *stream)
         hal.stream.write_all = hal.stream.write;
 #endif
 
-    hal.stream.set_enqueue_rt_handler(protocol_enqueue_realtime_command);
-
     switch(stream->type) {
 
 #if TELNET_ENABLE
@@ -432,6 +430,14 @@ static bool selectStream (const io_stream_t *stream)
         default:
             break;
     }
+
+    hal.stream.set_enqueue_rt_handler(protocol_enqueue_realtime_command);
+
+    if(hal.stream.disable_rx)
+        hal.stream.disable_rx(false);
+
+    if(grbl.on_stream_changed)
+        grbl.on_stream_changed(hal.stream.type);
 
     active_stream = hal.stream.type;
 
@@ -1778,7 +1784,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "210916";
+    hal.driver_version = "211029";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
