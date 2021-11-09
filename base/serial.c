@@ -210,6 +210,27 @@ const io_stream_t *serialInit (void)
 
 #endif
 
+    static const periph_pin_t tx = {
+        .function = Output_TX,
+        .group = PinGroup_UART,
+        .port = (void *)SERIAL1_BASE,
+        .pin = SERIAL1_TX_PIN,
+        .mode = { .mask = PINMODE_OUTPUT },
+        .description = "Primary UART"
+    };
+
+    static const periph_pin_t rx = {
+        .function = Input_RX,
+        .group = PinGroup_UART,
+        .port = (void *)SERIAL1_BASE,
+        .pin = SERIAL1_RX_PIN,
+        .mode = { .mask = PINMODE_NONE },
+        .description = "Primary UART"
+    };
+
+    hal.periph_port.register_pin(&rx);
+    hal.periph_port.register_pin(&tx);
+
     return &stream;
 }
 
@@ -370,6 +391,27 @@ const io_stream_t *serial2Init (void)
     IntPrioritySet(SERIAL2_INT, 0x40);
     UARTIntRegister(SERIAL2_BASE, uart2_interrupt_handler);
     UARTEnable(SERIAL2_BASE);
+
+    static const periph_pin_t tx = {
+        .function = Output_TX,
+        .group = PinGroup_UART2,
+        .port = (void *)SERIAL2_BASE,
+        .pin = SERIAL2_TX_PIN,
+        .mode = { .mask = PINMODE_OUTPUT },
+        .description = "Secondary UART"
+    };
+
+    static const periph_pin_t rx = {
+        .function = Input_RX,
+        .group = PinGroup_UART2,
+        .port = (void *)SERIAL2_BASE,
+        .pin = SERIAL2_RX_PIN,
+        .mode = { .mask = PINMODE_NONE },
+        .description = "Secondary UART"
+    };
+
+    hal.periph_port.register_pin(&rx);
+    hal.periph_port.register_pin(&tx);
 
     return &stream;
 }
