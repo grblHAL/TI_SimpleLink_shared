@@ -234,6 +234,7 @@ typedef struct {
     uint32_t port;
     uint8_t pin;
     pin_group_t group;
+    pin_mode_t mode;
     const char *description;
 } output_signal_t;
 

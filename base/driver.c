@@ -1347,7 +1347,8 @@ static void settings_changed (settings_t *settings)
             pullup = true;
             input = &inputpin[--i];
             input->bit = 1U << input->pin;
-            input->irq_mode = IRQ_Mode_None;
+            if(input->group != PinGroup_AuxInput)
+                input->irq_mode = IRQ_Mode_None;
             pullup = input->group == PinGroup_AuxInput;
 
             switch(input->id) {
@@ -1416,11 +1417,8 @@ static void settings_changed (settings_t *settings)
                     break;
             }
 
-            if(input->group == PinGroup_AuxInput) {
+            if(input->group == PinGroup_AuxInput)
                 pullup = true;
-                input->cap.pull_mode = PullMode_Up|PullMode_Down;
-                input->cap.irq_mode = IRQ_Mode_Rising|IRQ_Mode_Falling;
-            }
 
             input->debounce = hal.driver_cap.software_debounce && (input->group == PinGroup_Limit || input->group == PinGroup_Control);
 
@@ -1841,7 +1839,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "211107";
+    hal.driver_version = "211113";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1960,6 +1958,8 @@ bool driver_init (void)
             if(aux_inputs.pins.inputs == NULL)
                 aux_inputs.pins.inputs = input;
             aux_inputs.n_pins++;
+            input->cap.pull_mode = PullMode_UpDown;
+            input->cap.irq_mode = IRQ_Mode_Rising|IRQ_Mode_Falling;
         }
 
         if(input->group == PinGroup_Limit) {
