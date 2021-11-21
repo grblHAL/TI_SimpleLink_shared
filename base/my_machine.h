@@ -30,7 +30,7 @@
 //#define WEBUI_INFLASH      1 // Store WebUI files in flash instead of on SD card.
 //#define ETHERNET_ENABLE    1 // Ethernet streaming. Requires networking plugin.
 //#define SDCARD_ENABLE      1 // Run gcode programs from SD card, requires sdcard plugin.
-//#define KEYPAD_ENABLE      1 // I2C keypad for jogging etc., requires keypad plugin.
+#define KEYPAD_ENABLE      1 // I2C keypad for jogging etc., requires keypad plugin.
 //#define PWM_RAMPED         1 // Ramped spindle PWM.
 //#define LASER_PPI          1 // Laser PPI (Pulses Per Inch) option.
 //#define TRINAMIC_ENABLE 2130 // Trinamic TMC2130 stepper driver support. NOTE: work in progress.

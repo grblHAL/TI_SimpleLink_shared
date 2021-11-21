@@ -1737,7 +1737,7 @@ static bool driver_setup (settings_t *settings)
 
   // Set defaults
 
-    IOInitDone = settings->version == 19;
+    IOInitDone = settings->version == 21;
 
     hal.settings_changed(settings);
     hal.stepper.go_idle(true);
@@ -1839,7 +1839,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "211113";
+    hal.driver_version = "211121";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1991,7 +1991,7 @@ bool driver_init (void)
 #include "grbl/plugins_init.h"
 
     // no need to move version check before init - compiler will fail any signature mismatch for existing entries
-    return hal.version == 8;
+    return hal.version == 9;
 }
 
 /* interrupt handlers */
