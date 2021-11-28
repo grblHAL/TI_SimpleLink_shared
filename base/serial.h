@@ -109,7 +109,8 @@
 
 #define DEBUG_PRINT(string) serialWriteS(string)
 
-const io_stream_t *serialInit (void);
+void serialRegisterStreams (void);
+const io_stream_t *serialInit (uint32_t baud_rate);
 
 #ifdef SERIAL2_MOD
 
@@ -139,7 +140,7 @@ const io_stream_t *serialInit (void);
 #define SERIAL2_TX uartTXpin(SERIAL2, SERIAL2_IOPORT, SERIAL2_TX_PIN)
 #define SERIAL2_PINS uartIOpins(SERIAL2_RX_PIN, SERIAL2_TX_PIN)
 
-const io_stream_t *serial2Init (void);
+const io_stream_t *serial2Init (uint32_t baud_rate);
 
 #endif
 

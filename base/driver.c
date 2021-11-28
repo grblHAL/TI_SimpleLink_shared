@@ -1839,7 +1839,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "211121";
+    hal.driver_version = "211124";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1880,7 +1880,7 @@ bool driver_init (void)
 
     hal.control.get_state = systemGetState;
 
-    serial_stream = serialInit();
+    serial_stream = serialInit(115200);
 
     hal.stream_select = selectStream;
     hal.stream_select(serial_stream);
@@ -1944,7 +1944,7 @@ bool driver_init (void)
 #endif
 #if MPG_MODE_ENABLE
     hal.driver_cap.mpg_mode = On;
-    mpg_stream = serial2Init();
+    mpg_stream = serial2Init(115200);
 #endif
 
     uint32_t i;
@@ -1983,6 +1983,8 @@ bool driver_init (void)
 #ifdef HAS_IOPORTS
     ioports_init(&aux_inputs, &aux_outputs);
 #endif
+
+    serialRegisterStreams();
 
 #if ETHERNET_ENABLE
     enet_init();

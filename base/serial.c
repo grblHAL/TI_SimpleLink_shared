@@ -36,6 +36,39 @@ static enqueue_realtime_command_ptr enqueue_realtime_command2 = protocol_enqueue
 static void uart2_interrupt_handler (void);
 #endif
 
+static io_stream_properties_t serial[] = {
+    {
+      .type = StreamType_Serial,
+      .instance = 0,
+      .flags.claimable = On,
+      .flags.claimed = Off,
+      .flags.connected = On,
+      .flags.can_set_baud = Off,
+      .claim = serialInit
+    },
+#ifdef SERIAL2_MOD
+    {
+      .type = StreamType_Serial,
+      .instance = 1,
+      .flags.claimable = On,
+      .flags.claimed = Off,
+      .flags.connected = On,
+      .flags.can_set_baud = Off,
+      .claim = serial2Init
+    }
+#endif
+};
+
+void serialRegisterStreams (void)
+{
+    static io_stream_details_t streams = {
+        .n_streams = sizeof(serial) / sizeof(io_stream_properties_t),
+        .streams = serial,
+    };
+
+    stream_register_streams(&streams);
+}
+
 //
 // serialGetC - returns -1 if no data available
 //
@@ -155,7 +188,7 @@ static enqueue_realtime_command_ptr serialSetRtHandler (enqueue_realtime_command
     return prev;
 }
 
-const io_stream_t *serialInit (void)
+const io_stream_t *serialInit (uint32_t baud_rate)
 {
     static const io_stream_t stream = {
         .type = StreamType_Serial,
@@ -173,6 +206,11 @@ const io_stream_t *serialInit (void)
         .disable_rx = serialDisable,
         .set_enqueue_rt_handler = serialSetRtHandler
     };
+
+    if(serial[0].flags.claimed || baud_rate != 115200)
+        return NULL;
+
+    serial[0].flags.claimed = On;
 
     SysCtlPeripheralEnable(SERIAL1_PERIPH);
     SysCtlPeripheralEnable(SERIAL1_SYSCTL);
@@ -353,7 +391,7 @@ static enqueue_realtime_command_ptr serial2SetRtHandler (enqueue_realtime_comman
     return prev;
 }
 
-const io_stream_t *serial2Init (void)
+const io_stream_t *serial2Init (uint32_t baud_rate)
 {
     static const io_stream_t stream = {
         .type = StreamType_Serial,
@@ -370,6 +408,11 @@ const io_stream_t *serial2Init (void)
         .disable_rx = serial2Disable,
         .set_enqueue_rt_handler = serial2SetRtHandler
     };
+
+    if(serial[1].flags.claimed || baud_rate != 115200)
+        return NULL;
+
+    serial[1].flags.claimed = On;
 
     SysCtlPeripheralEnable(SERIAL2_PERIPH);
     SysCtlPeripheralEnable(SERIAL2_SYSCTL);
