@@ -409,6 +409,8 @@ static bool selectStream (const io_stream_t *stream)
     if(!stream)
         stream = serial_stream;
 
+    bool webui_connected = hal.stream.state.webui_connected;
+
     memcpy(&hal.stream, stream, sizeof(io_stream_t));
 
 #if ETHERNET_ENABLE
@@ -431,6 +433,7 @@ static bool selectStream (const io_stream_t *stream)
         case StreamType_WebSocket:
             hal.stream.write_all("[MSG:WEBSOCKET STREAM ACTIVE]" ASCII_EOL);
             services.websocket = On;
+            hal.stream.state.webui_connected = webui_connected;
             break;
 #endif
         case StreamType_Serial:
@@ -1839,7 +1842,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "211124";
+    hal.driver_version = "211203";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
