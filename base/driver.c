@@ -50,8 +50,10 @@ static void trinamic_diag1_isr (void);
 #include "i2c.h"
 #endif
 
-#if SDCARD_ENABLE
+#if SDCARD_ENABLE && defined(__MSP432E401Y__)
 #include "sdcard/sdcard.h"
+#include <ti/drivers/SDFatFS.h>
+#include <ti/boards/MSP_EXP432E401Y/Board.h>
 #endif
 
 #if ETHERNET_ENABLE
@@ -488,12 +490,33 @@ boolean bCalledFromInterrupt (void)
 }
 */
 
-#if SDCARD_ENABLE && !defined(__MSP432E401Y__)
+#if SDCARD_ENABLE
+
+#if defined(__MSP432E401Y__)
+
+static char *sdcard_mount (FATFS **fs)
+{
+    SDFatFS_Handle fsh = SDFatFS_open(Board_SDFatFS0, 0);
+
+    if(fsh)
+        *fs = &fsh->object->filesystem;
+
+    return "";
+}
+
+static bool sdcard_unmount (FATFS **fs)
+{
+    return false; // for now
+}
+
+#else
 
 void fatfsTimerCallback (TimerHandle_t xTimer)
 {
     disk_timerproc();
 }
+
+#endif
 
 #endif
 
@@ -1715,9 +1738,12 @@ static bool driver_setup (settings_t *settings)
 
 #if SDCARD_ENABLE
   #ifdef __MSP432E401Y__
-    SDFatFS_init();
-  #endif
+    sdcard_events_t *card = sdcard_init();
+    card->on_mount = sdcard_mount;
+    card->on_unmount = sdcard_unmount;
+  #else
     sdcard_init();
+  #endif
   #if defined(FreeRTOS) && !defined(__MSP432E401Y__)
     TimerHandle_t xFatFsTimer = xTimerCreate("fatfsTimer", pdMS_TO_TICKS(10), pdTRUE, NULL, fatfsTimerCallback);
     xTimerStart(xFatFsTimer, 10);
@@ -1842,7 +1868,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "211203";
+    hal.driver_version = "211206";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
