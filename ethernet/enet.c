@@ -1,7 +1,7 @@
 //
 // enet.c - lwIP/FreeRTOS TCP/IP stream implementation
 //
-// v1.3 / 2021-06-08 / Io Engineering / Terje
+// v1.3 / 2021-12-09 / Io Engineering / Terje
 //
 
 /*
@@ -12,14 +12,14 @@ All rights reserved.
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
 
-· Redistributions of source code must retain the above copyright notice, this
+* Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
 
-· Redistributions in binary form must reproduce the above copyright notice, this
+* Redistributions in binary form must reproduce the above copyright notice, this
 list of conditions and the following disclaimer in the documentation and/or
 other materials provided with the distribution.
 
-· Neither the name of the copyright holder nor the names of its contributors may
+* Neither the name of the copyright holder nor the names of its contributors may
 be used to endorse or promote products derived from this software without
 specific prior written permission.
 
@@ -77,10 +77,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 static volatile bool linkUp = false;
 static uint32_t IPAddress = 0;
+static stream_type_t active_stream = StreamType_Null;
 static network_settings_t network, ethernet;
 static network_services_t services = {0}, allowed_services;
 static uint32_t nvs_address;
 static on_report_options_ptr on_report_options;
+static on_stream_changed_ptr on_stream_changed;
 static char netservices[30] = ""; // must be large enough to hold all service names
 
 static char *enet_ip_address (void)
@@ -106,6 +108,12 @@ static void report_options (bool newopt)
         hal.stream.write("[IP:");
         hal.stream.write(enet_ip_address());
         hal.stream.write("]\r\n");
+
+        if(active_stream == StreamType_Telnet || active_stream == StreamType_WebSocket) {
+            hal.stream.write("[NETCON:");
+            hal.stream.write(active_stream == StreamType_Telnet ? "Telnet" : "Websocket");
+            hal.stream.write("]" ASCII_EOL);
+        }
     }
 }
 
@@ -429,6 +437,15 @@ static void ethernet_settings_load (void)
     ethernet.services.mask &= allowed_services.mask;
 }
 
+static void stream_changed (stream_type_t type)
+{
+    if(type != StreamType_SDCard)
+        active_stream = type;
+
+    if(on_stream_changed)
+        on_stream_changed(type);
+}
+
 bool enet_init (void)
 {
     if((nvs_address = nvs_alloc(sizeof(network_settings_t)))) {
@@ -437,6 +454,9 @@ bool enet_init (void)
 
         on_report_options = grbl.on_report_options;
         grbl.on_report_options = report_options;
+
+        on_stream_changed = grbl.on_stream_changed;
+        grbl.on_stream_changed = stream_changed;
 
         settings_register(&setting_details);
 

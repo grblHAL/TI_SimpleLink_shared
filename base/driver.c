@@ -85,29 +85,9 @@ static uint16_t step_prescaler[3] = {
 
 #define STEPPER_PULSE_PRESCALER (12 - 1)
 
-static const io_stream_t *serial_stream;
 #if MPG_MODE_ENABLE
 static const io_stream_t *mpg_stream;
 #endif
-
-#if ETHERNET_ENABLE
-
-static network_services_t services = {0};
-
-static void enetStreamWriteS (const char *data)
-{
-#if TELNET_ENABLE
-    if(services.telnet)
-        TCPStreamWriteS(data);
-#endif
-#if WEBSOCKET_ENABLE
-    if(services.websocket)
-        WsStreamWriteS(data);
-#endif
-    serial_stream->write(data);
-}
-
-#endif // ETHERNET_ENABLE
 
 #if PWM_RAMPED
 
@@ -403,65 +383,6 @@ static bool irq_claim (irq_type_t irq, uint_fast8_t id, irq_callback_ptr handler
 }
 
 #endif
-
-static bool selectStream (const io_stream_t *stream)
-{
-    static stream_type_t active_stream = StreamType_Serial;
-
-    if(!stream)
-        stream = serial_stream;
-
-    bool webui_connected = hal.stream.state.webui_connected;
-
-    memcpy(&hal.stream, stream, sizeof(io_stream_t));
-
-#if ETHERNET_ENABLE
-    if(!hal.stream.write_all)
-        hal.stream.write_all = enetStreamWriteS;
-#else
-    if(!hal.stream.write_all)
-        hal.stream.write_all = hal.stream.write;
-#endif
-
-    switch(stream->type) {
-
-#if TELNET_ENABLE
-        case StreamType_Telnet:
-            hal.stream.write_all("[MSG:TELNET STREAM ACTIVE]" ASCII_EOL);
-            services.telnet = On;
-            break;
-#endif
-#if WEBSOCKET_ENABLE
-        case StreamType_WebSocket:
-            hal.stream.write_all("[MSG:WEBSOCKET STREAM ACTIVE]" ASCII_EOL);
-            services.websocket = On;
-            hal.stream.state.webui_connected = webui_connected;
-            break;
-#endif
-        case StreamType_Serial:
-#if ETHERNET_ENABLE
-            services.mask = 0;
-#endif
-            if(active_stream != StreamType_Serial)
-                hal.stream.write_all("[MSG:SERIAL STREAM ACTIVE]" ASCII_EOL);
-            break;
-
-        default:
-            break;
-    }
-
-    hal.stream.set_enqueue_rt_handler(protocol_enqueue_realtime_command);
-
-    if(hal.stream.disable_rx)
-        hal.stream.disable_rx(false);
-
-    if(grbl.on_stream_changed)
-        grbl.on_stream_changed(hal.stream.type);
-
-    active_stream = hal.stream.type;
-
-    return stream->type == hal.stream.type;
-}
 
 static void spindle_set_speed (uint_fast16_t pwm_value);
 
@@ -1868,7 +1789,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "211206";
+    hal.driver_version = "211211";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1909,17 +1830,6 @@ bool driver_init (void)
 
     hal.control.get_state = systemGetState;
 
-    serial_stream = serialInit(115200);
-
-    hal.stream_select = selectStream;
-    hal.stream_select(serial_stream);
-
-#if I2C_ENABLE
-    I2CInit();
-#endif
-
-    eeprom_init();
-
     hal.irq_enable = enable_irq;
     hal.irq_disable = disable_irq;
 #if I2C_STROBE_ENABLE
@@ -1936,6 +1846,14 @@ bool driver_init (void)
 #else
     hal.get_elapsed_ticks = getElapsedTicks;
 #endif
+
+    stream_connect(serialInit(115200));
+
+#if I2C_ENABLE
+    I2CInit();
+#endif
+
+    eeprom_init();
 
 #ifdef DEBUGOUT
     hal.debug_out = debug_out;
