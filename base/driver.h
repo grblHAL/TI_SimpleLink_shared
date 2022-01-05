@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2021 Terje Io
+  Copyright (c) 2018-2022 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -80,7 +80,7 @@
 
 // End configuration
 
-#if MPG_MODE_ENABLE
+#if MPG_ENABLE
 #define SERIAL2_MOD
 #endif
 

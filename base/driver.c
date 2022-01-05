@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2021 Terje Io
+  Copyright (c) 2018-2022 Terje Io
 
   Some parts
    Copyright (c) 2011-2015 Sungeun K. Jeon
@@ -58,12 +58,6 @@ static void trinamic_diag1_isr (void);
 
 #if ETHERNET_ENABLE
   #include "shared/ethernet/enet.h"
-  #if TELNET_ENABLE
-    #include "networking/TCPStream.h"
-  #endif
-  #if WEBSOCKET_ENABLE
-    #include "networking/WsStream.h"
-  #endif
 #endif
 
 #define USE_32BIT_TIMER 1
@@ -84,10 +78,6 @@ static uint16_t step_prescaler[3] = {
 #endif
 
 #define STEPPER_PULSE_PRESCALER (12 - 1)
-
-#if MPG_MODE_ENABLE
-static const io_stream_t *mpg_stream;
-#endif
 
 #if PWM_RAMPED
 
@@ -129,8 +119,8 @@ static void stepperPulseStartSyncronized (stepper_t *stepper);
 
 #endif
 
-#ifdef MODE_SWITCH_PIN
-#define MODE_SWITCH_BIT (1<<MODE_SWITCH_PIN)
+#ifdef MPG_MODE_PIN
+#define MPG_MODE_BIT (1<<MPG_MODE_PIN)
 #endif
 
 #define DEBOUNCE_QUEUE 8 // Must be a power of 2
@@ -159,10 +149,10 @@ static input_signal_t inputpin[] = {
 #endif
     { .id = Input_Probe,          .port = PROBE_PORT,         .pin = PROBE_PIN,           .group = PinGroup_Probe },
 #ifdef I2C_STROBE_PIN
-    { .id = Input_KeypadStrobe,   .port = I2C_STROBE_PORT,    .pin = I2C_STROBE_PIN,       .group = PinGroup_Keypad },
+    { .id = Input_KeypadStrobe,   .port = I2C_STROBE_PORT,    .pin = I2C_STROBE_PIN,      .group = PinGroup_Keypad },
 #endif
-#ifdef MODE_SWITCH_PIN
-    { .id = Input_ModeSelect,     .port = MODE_PORT,          .pin = MODE_SWITCH_PIN,     .group = PinGroup_MPG },
+#ifdef MPG_MODE_PIN
+    { .id = Input_ModeSelect,     .port = MPG_MODE_PORT,      .pin = MPG_MODE_PIN,        .group = PinGroup_MPG },
 #endif
 // Limit input pins must be consecutive in this array
     { .id = Input_LimitX,         .port = X_LIMIT_PORT,       .pin = X_LIMIT_PIN,         .group = PinGroup_Limit },
@@ -1179,17 +1169,23 @@ static void disable_irq (void)
     IntMasterDisable();
 }
 
-#if MPG_MODE_ENABLE
+#if  MPG_MODE == 1
 
-static void modeSelect (bool mpg_mode)
+static void mpg_select (sys_state_t state)
 {
-    stream_enable_mpg(mpg_stream, mpg_mode);
+    stream_mpg_enable(GPIOPinRead(MPG_MODE_PORT, MPG_MODE_BIT) == 0);
+
+    GPIOIntEnable(MPG_MODE_PORT, MPG_MODE_BIT);
 }
 
-static void modechange (void)
+static void mpg_enable (sys_state_t state)
 {
-    modeSelect(GPIOPinRead(MODE_PORT, MODE_SWITCH_BIT) == 0);
-    GPIOIntEnable(MODE_PORT, MODE_SWITCH_BIT);
+    if(sys.mpg_mode == (GPIOPinRead(MPG_MODE_PORT, MPG_MODE_BIT) == 0))
+        mpg_select(state);
+
+#if I2C_STROBE_ENABLE
+//    BITBAND_PERI(I2C_STROBE_PORT->IE, I2C_STROBE_PIN) = 1;
+#endif
 }
 
 #endif
@@ -1355,6 +1351,7 @@ static void settings_changed (settings_t *settings)
                     break;
 
                 case Input_ModeSelect:
+                    pullup = true;
                     input->irq_mode = IRQ_Mode_Change;
                     break;
 
@@ -1395,13 +1392,6 @@ static void settings_changed (settings_t *settings)
             if(irq_handler[--i].count)
                 GPIOIntRegister(irq_handler[i].port, irq_handler[i].handler);
         } while(i);
-
-#if MPG_MODE_ENABLE
-       if(sys.mpg_mode != !(GPIOPinRead(MODE_PORT, MODE_SWITCH_BIT) == MODE_SWITCH_BIT))
-            modeSelect(true);
-       GPIOIntEnable(MODE_PORT, MODE_SWITCH_BIT);
-#endif
-
     }
 }
 
@@ -1789,7 +1779,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "211211";
+    hal.driver_version = "220104";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1889,9 +1879,9 @@ bool driver_init (void)
 #if LASER_PPI
     hal.driver_cap.laser_ppi_mode = On;
 #endif
-#if MPG_MODE_ENABLE
-    hal.driver_cap.mpg_mode = On;
-    mpg_stream = serial2Init(115200);
+#if  MPG_MODE == 1
+    if(hal.driver_cap.mpg_mode = stream_mpg_register(serial2Init(115200), false, NULL))
+        protocol_enqueue_rt_command(mpg_enable);
 #endif
 
     uint32_t i;
@@ -2067,10 +2057,10 @@ static /* inline __attribute__((always_inline))*/ IRQHandler (input_signal_t *in
 
             else switch(input->group) {
 
-#if MPG_MODE_ENABLE
+#if  MPG_MODE == 1
                 case PinGroup_MPG:
-//                    if(delay.ms == 0) // Ignore if delay is active
-//                        driver_delay_ms(50, modeChange);
+                    GPIOIntDisable(MPG_MODE_PORT, MPG_MODE_BIT);
+                    protocol_enqueue_rt_command(mpg_select);
                     break;
 #endif
 

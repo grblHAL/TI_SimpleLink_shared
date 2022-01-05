@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2021 Terje Io
+  Copyright (c) 2020-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -30,7 +30,8 @@
 //#define WEBUI_INFLASH      1 // Store WebUI files in flash instead of on SD card.
 //#define ETHERNET_ENABLE    1 // Ethernet streaming. Requires networking plugin.
 //#define SDCARD_ENABLE      1 // Run gcode programs from SD card, requires sdcard plugin.
-#define KEYPAD_ENABLE      1 // I2C keypad for jogging etc., requires keypad plugin.
+//#define MPG_ENABLE         1 // Enable MPG interface. Requires serial port and one handshake pin.
+//#define KEYPAD_ENABLE      1 // Set to 1 for I2C keypad, 2 for other input such as serial data
 //#define PWM_RAMPED         1 // Ramped spindle PWM.
 //#define LASER_PPI          1 // Laser PPI (Pulses Per Inch) option.
 //#define TRINAMIC_ENABLE 2130 // Trinamic TMC2130 stepper driver support. NOTE: work in progress.

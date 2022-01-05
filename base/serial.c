@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2021 Terje Io
+  Copyright (c) 2017-2022 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -395,7 +395,7 @@ const io_stream_t *serial2Init (uint32_t baud_rate)
 {
     static const io_stream_t stream = {
         .type = StreamType_Serial,
-        .connected = true,
+        .state.connected = true,
         .read = serial2GetC,
 //        .write = serial2WriteS,
 //        .write_char = serial2PutC,
@@ -467,7 +467,7 @@ static void uart2_interrupt_handler (void)
         int32_t c = UARTCharGet(SERIAL2_BASE);
         if(!enqueue_realtime_command2((char)c)) {
             uint16_t next_head = BUFNEXT(rx2buf.head, rx2buf);  // Get and increment buffer pointer
-            if(tail == rx2buf.tail)                             // If buffer full
+            if(next_head == rx2buf.tail)                        // If buffer full
                 rx2buf.overflow = 1;                            // flag overlow
             else {
                 rx2buf.data[rx2buf.head] = (char)c;             // Add data to buffer
