@@ -1779,7 +1779,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "220104";
+    hal.driver_version = "220111";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1894,7 +1894,7 @@ bool driver_init (void)
         if(input->group == PinGroup_AuxInput) {
             if(aux_inputs.pins.inputs == NULL)
                 aux_inputs.pins.inputs = input;
-            aux_inputs.n_pins++;
+            input->id = (pin_function_t)(Input_Aux0 + aux_inputs.n_pins++);
             input->cap.pull_mode = PullMode_UpDown;
             input->cap.irq_mode = IRQ_Mode_Rising|IRQ_Mode_Falling;
         }
@@ -1913,7 +1913,7 @@ bool driver_init (void)
         if(output->group == PinGroup_AuxOutput) {
             if(aux_outputs.pins.outputs == NULL)
                 aux_outputs.pins.outputs = output;
-            aux_outputs.n_pins++;
+            output->id = (pin_function_t)(Output_Aux0 + aux_outputs.n_pins++);
         }
     }
 
