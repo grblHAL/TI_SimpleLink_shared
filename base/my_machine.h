@@ -26,6 +26,7 @@
 // Configuration
 // Uncomment to enable.
 
+//#define SAFETY_DOOR_ENABLE 1 // Enable safety door input.
 //#define WEBUI_ENABLE       1 // Enable ESP3D-WEBUI plugin along with networking and SD card plugins.
 //#define WEBUI_INFLASH      1 // Store WebUI files in flash instead of on SD card.
 //#define ETHERNET_ENABLE    1 // Ethernet streaming. Requires networking plugin.
