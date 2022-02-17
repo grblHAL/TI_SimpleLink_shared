@@ -1779,7 +1779,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "220111";
+    hal.driver_version = "220216";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1879,10 +1879,6 @@ bool driver_init (void)
 #if LASER_PPI
     hal.driver_cap.laser_ppi_mode = On;
 #endif
-#if  MPG_MODE == 1
-    if(hal.driver_cap.mpg_mode = stream_mpg_register(serial2Init(115200), false, NULL))
-        protocol_enqueue_rt_command(mpg_enable);
-#endif
 
     uint32_t i;
     input_signal_t *input;
@@ -1922,6 +1918,20 @@ bool driver_init (void)
 #endif
 
     serialRegisterStreams();
+
+#if MPG_MODE == 1
+  #if KEYPAD_ENABLE == 2
+    if((hal.driver_cap.mpg_mode = stream_mpg_register(stream_open_instance(MPG_STREAM, 115200, NULL), false, keypad_enqueue_keycode)))
+        protocol_enqueue_rt_command(mpg_enable);
+  #else
+    if((hal.driver_cap.mpg_mode = stream_mpg_register(stream_open_instance(MPG_STREAM, 115200, NULL), false, NULL)))
+        protocol_enqueue_rt_command(mpg_enable);
+  #endif
+#elif MPG_MODE == 2
+    hal.driver_cap.mpg_mode = stream_mpg_register(stream_open_instance(MPG_STREAM, 115200, NULL), false, keypad_enqueue_keycode);
+#elif KEYPAD_ENABLE == 2
+    stream_open_instance(KEYPAD_STREAM, 115200, keypad_enqueue_keycode);
+#endif
 
 #if ETHERNET_ENABLE
     enet_init();

@@ -31,8 +31,11 @@
 //#define WEBUI_INFLASH      1 // Store WebUI files in flash instead of on SD card.
 //#define ETHERNET_ENABLE    1 // Ethernet streaming. Requires networking plugin.
 //#define SDCARD_ENABLE      1 // Run gcode programs from SD card, requires sdcard plugin.
-//#define MPG_ENABLE         1 // Enable MPG interface. Requires serial port and one handshake pin.
-//#define KEYPAD_ENABLE      1 // Set to 1 for I2C keypad, 2 for other input such as serial data
+//#define MPG_ENABLE         1 // Enable MPG interface. Requires serial port and one handshake pin unless
+                               // KEYPAD_ENABLE is set to 2 when mode switching is done by the CMD_MPG_MODE_TOGGLE (0x8B)
+                               // command character. Set both MPG_ENABLE and KEYPAD_ENABLE to 2 to use a handshake pin anyway.
+//#define KEYPAD_ENABLE      1 // Set to 1 for I2C keypad, 2 for other input such as serial data. If KEYPAD_ENABLE is set to 2
+                               // and MPG_ENABLE is uncommented then a serial stream is shared with the MPG.
 //#define PWM_RAMPED         1 // Ramped spindle PWM.
 //#define LASER_PPI          1 // Laser PPI (Pulses Per Inch) option.
 //#define TRINAMIC_ENABLE 2130 // Trinamic TMC2130 stepper driver support. NOTE: work in progress.

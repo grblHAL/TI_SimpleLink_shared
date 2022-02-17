@@ -80,7 +80,7 @@
 
 // End configuration
 
-#if MPG_ENABLE
+#if MPG_ENABLE || KEYPAD_ENABLE == 2
 #define SERIAL2_MOD
 #endif
 
