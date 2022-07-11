@@ -1236,8 +1236,6 @@ static void settings_changed (settings_t *settings)
 
 #endif
 
-        stepperEnable(settings->steppers.deenergize);
-
         if(hal.spindle.cap.variable) {
             TimerPrescaleSet(SPINDLE_PWM_TIMER_BASE, TIMER_B, spindle_pwm.period >> 16);
             TimerLoadSet(SPINDLE_PWM_TIMER_BASE, TIMER_B, spindle_pwm.period & 0xFFFF);
@@ -1776,7 +1774,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "220703";
+    hal.driver_version = "220710";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
