@@ -94,6 +94,39 @@ static char *enet_ip_address (void)
     return ip;
 }
 
+network_info_t *networking_get_info (void)
+{
+    static network_info_t info;
+
+    memcpy(&info.status, &network, sizeof(network_settings_t));
+
+    ip4addr_ntoa_r((const ip_addr_t *)&IPAddress, info.status.ip, IPADDR_STRLEN_MAX);
+
+    if(info.status.ip_mode == IpMode_DHCP) {
+        *info.status.gateway = '\0';
+        *info.status.mask = '\0';
+    }
+
+    info.is_ethernet = true;
+    info.link_up = linkUp;
+    info.mbps = 100;
+    info.status.services = services;
+
+    struct netif *netif = netif_default; // netif_get_by_index(0);
+
+    if(netif) {
+
+        if(linkUp) {
+            ip4addr_ntoa_r(netif_ip_gw4(netif), info.status.gateway, IP4ADDR_STRLEN_MAX);
+            ip4addr_ntoa_r(netif_ip_netmask4(netif), info.status.mask, IP4ADDR_STRLEN_MAX);
+        }
+
+        sprintf(info.mac, "%02X:%02X:%02X:%02X:%02X:%02X", netif->hwaddr[0], netif->hwaddr[1], netif->hwaddr[2], netif->hwaddr[3], netif->hwaddr[4], netif->hwaddr[5]);
+    }
+
+    return &info;
+}
+
 static void report_options (bool newopt)
 {
     on_report_options(newopt);
