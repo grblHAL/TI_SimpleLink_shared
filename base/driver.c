@@ -56,6 +56,11 @@ static void trinamic_diag1_isr (void);
 #include <ti/boards/MSP_EXP432E401Y/Board.h>
 #endif
 
+#if LITTLEFS_ENABLE
+#include "littlefs_hal.h"
+#include "sdcard/fs_littlefs.h"
+#endif
+
 #if ETHERNET_ENABLE
   #include "shared/ethernet/enet.h"
 #endif
@@ -1654,6 +1659,10 @@ static bool driver_setup (settings_t *settings)
   #endif
 #endif
 
+#if LITTLEFS_ENABLE
+    fs_littlefs_mount("/littlefs", ti_littlefs_hal());
+#endif
+
 #if I2C_STROBE_ENABLE
 
    /*********************
@@ -1772,7 +1781,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "220907";
+    hal.driver_version = "220913";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);

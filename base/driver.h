@@ -63,6 +63,17 @@
 #error "Networking protocols requires ethernet enabled!"
 #endif
 
+#if WEBUI_ENABLE
+  #ifdef WEBUI_INFLASH
+  #undef WEBUI_INFLASH
+  #endif
+  #ifdef LITTLEFS_ENABLE
+  #undef LITTLEFS_ENABLE
+  #endif
+#define WEBUI_INFLASH   1
+#define LITTLEFS_ENABLE 1
+#endif
+
 #ifdef BOARD_CNC_BOOSTERPACK
 #include "cnc_boosterpack_map.h"
 #elif defined(BOARD_MY_MACHINE)

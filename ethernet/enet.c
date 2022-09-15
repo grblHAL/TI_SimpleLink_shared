@@ -1,12 +1,12 @@
 //
 // enet.c - lwIP/FreeRTOS TCP/IP stream implementation
 //
-// v1.3 / 2021-12-09 / Io Engineering / Terje
+// v1.4 / 2022-09-13 / Io Engineering / Terje
 //
 
 /*
 
-Copyright (c) 2018-2021, Terje Io
+Copyright (c) 2018-2022, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -83,7 +83,7 @@ static network_services_t services = {0}, allowed_services;
 static uint32_t nvs_address;
 static on_report_options_ptr on_report_options;
 static on_stream_changed_ptr on_stream_changed;
-static char netservices[30] = ""; // must be large enough to hold all service names
+static char netservices[NETWORK_SERVICES_LEN] = ""; // must be large enough to hold all service names
 
 static char *enet_ip_address (void)
 {
@@ -136,6 +136,10 @@ static void report_options (bool newopt)
 #if FTP_ENABLE
         if(services.ftp)
             hal.stream.write(",FTP");
+#endif
+#if WEBDAV_ENABLE
+        if(services.webdav)
+            hal.stream.write(",WebDAV");
 #endif
     } else {
         hal.stream.write("[IP:");
@@ -206,6 +210,10 @@ void setupServices (void *pvArg)
 #if HTTP_ENABLE
         if(network.services.http && !services.http)
             services.http = httpd_init(network.http_port == 0 ? NETWORK_HTTP_PORT : network.http_port);
+  #if WEBDAV_ENABLE
+        if(network.services.webdav && !services.webdav)
+            services.webdav = webdav_init();
+  #endif
 #endif
 
 #if WEBSOCKET_ENABLE
