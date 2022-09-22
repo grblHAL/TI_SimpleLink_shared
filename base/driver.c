@@ -1251,7 +1251,7 @@ static void settings_changed (settings_t *settings)
             hal.spindle.set_state = spindleSetState;
         }
 
-        spindle_update_caps(hal.spindle.cap.variable);
+        spindle_update_caps(hal.spindle.cap.variable ? &spindle_pwm : NULL);
 
         pulse_length = (uint32_t)(10.0f * (settings->steppers.pulse_microseconds - STEP_PULSE_LATENCY)) - 1;
 
@@ -1781,7 +1781,7 @@ bool driver_init (void)
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
 #endif
-    hal.driver_version = "220913";
+    hal.driver_version = "220922";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
