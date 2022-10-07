@@ -27,6 +27,7 @@
 #else
 #define BOARD_NAME "CNC BoosterPack";
 #endif
+#define BOARD_URL "https://github.com/terjeio/CNC_Boosterpack"
 
 #define HAS_IOPORTS
 

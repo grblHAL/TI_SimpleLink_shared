@@ -141,6 +141,14 @@ static void report_options (bool newopt)
         if(services.webdav)
             hal.stream.write(",WebDAV");
 #endif
+#if MDNS_ENABLE
+        if(services.mdns)
+            hal.stream.write(",mDNS");
+#endif
+#if SSDP_ENABLE
+        if(services.ssdp)
+            hal.stream.write(",SSDP");
+#endif
     } else {
         hal.stream.write("[IP:");
         hal.stream.write(enet_ip_address());
@@ -154,35 +162,25 @@ static void report_options (bool newopt)
     }
 }
 
-void lwIPHostTimerHandler (void)
+#if MDNS_ENABLE
+
+static void mdns_device_info (struct mdns_service *service, void *txt_userdata)
 {
-    bool isLinkUp = PREF(GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0)) != 0;
+    char build[20] = "build=";
 
-    IPAddress = network.ip_mode == IpMode_Static && isLinkUp ? *(uint32_t *)network.ip : lwIPLocalIPAddrGet();
-
-    if(IPAddress == 0xffffffff)
-        IPAddress = 0;
-
-    if(isLinkUp != linkUp) {
-        linkUp = isLinkUp;
-#if TELNET_ENABLE
-        telnetd_notify_link_status(linkUp);
-#endif
-    }
-
-#if TELNET_ENABLE
-    if(services.telnet)
-        telnetd_poll();
-#endif
-#if FTP_ENABLE
-    if(services.ftp)
-        ftpd_poll();
-#endif
-#if WEBSOCKET_ENABLE
-    if(services.websocket)
-        websocketd_poll();
-#endif
+    strcat(build, uitoa(GRBL_BUILD));
+    mdns_resp_add_service_txtitem(service, "model=grblHAL", 13);
+    mdns_resp_add_service_txtitem(service, (char *)txt_userdata, strlen((char *)txt_userdata));
+    mdns_resp_add_service_txtitem(service, build, strlen(build));
 }
+
+static void mdns_service_info (struct mdns_service *service, void *txt_userdata)
+{
+    if(txt_userdata)
+        mdns_resp_add_service_txtitem(service, (char *)txt_userdata, strlen((char *)txt_userdata));
+}
+
+#endif
 
 void setupServices (void *pvArg)
 {
@@ -214,11 +212,73 @@ void setupServices (void *pvArg)
         if(network.services.webdav && !services.webdav)
             services.webdav = webdav_init();
   #endif
+  #if SSDP_ENABLE
+        if(network.services.ssdp && !services.ssdp)
+            services.ssdp = ssdp_init(network.http_port);
+ #endif
 #endif
 
 #if WEBSOCKET_ENABLE
         if(network.services.websocket && !services.websocket)
             services.websocket = websocketd_init(network.websocket_port == 0 ? NETWORK_WEBSOCKET_PORT : network.websocket_port);
+#endif
+
+#if MDNS_ENABLE
+    if(*network.hostname && network.services.mdns && !services.mdns) {
+
+        mdns_resp_init();
+
+        if((services.mdns = mdns_resp_add_netif(netif_default, network.hostname, MDNS_TTL) == ERR_OK)) {
+
+            mdns_resp_add_service(netif_default, network.hostname, "_device-info", DNSSD_PROTO_TCP, 0, MDNS_TTL, mdns_device_info, "version=" GRBL_VERSION);
+
+            if(services.http)
+                mdns_resp_add_service(netif_default, network.hostname, "_http", DNSSD_PROTO_TCP, network.http_port, MDNS_TTL, mdns_service_info, "path=/");
+            if(services.webdav)
+                mdns_resp_add_service(netif_default, network.hostname, "_webdav", DNSSD_PROTO_TCP, network.http_port, MDNS_TTL, mdns_service_info, "path=/");
+            if(services.websocket)
+                mdns_resp_add_service(netif_default, network.hostname, "_websocket", DNSSD_PROTO_TCP, network.websocket_port, MDNS_TTL, mdns_service_info, NULL);
+            if(services.telnet)
+                mdns_resp_add_service(netif_default, network.hostname, "_telnet", DNSSD_PROTO_TCP, network.telnet_port, MDNS_TTL, mdns_service_info, NULL);
+            if(services.ftp)
+                mdns_resp_add_service(netif_default, network.hostname, "_ftp", DNSSD_PROTO_TCP, network.ftp_port, MDNS_TTL, mdns_service_info, "path=/");
+
+//            mdns_resp_announce(netif_default);
+        }
+    }
+#endif
+}
+
+void lwIPHostTimerHandler (void)
+{
+    bool isLinkUp = PREF(GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0)) != 0;
+
+    IPAddress = network.ip_mode == IpMode_Static && isLinkUp ? *(uint32_t *)network.ip : lwIPLocalIPAddrGet();
+
+    if(IPAddress == 0xffffffff)
+        IPAddress = 0;
+
+    if(isLinkUp != linkUp && IPAddress) {
+
+        if((linkUp = isLinkUp))
+            tcpip_callback(setupServices, 0);
+
+#if TELNET_ENABLE
+        telnetd_notify_link_status(linkUp);
+#endif
+    }
+
+#if TELNET_ENABLE
+    if(services.telnet)
+        telnetd_poll();
+#endif
+#if FTP_ENABLE
+    if(services.ftp)
+        ftpd_poll();
+#endif
+#if WEBSOCKET_ENABLE
+    if(services.websocket)
+        websocketd_poll();
 #endif
 }
 
@@ -243,6 +303,15 @@ bool enet_start (void)
 
     memcpy(&network, &ethernet, sizeof(network_settings_t));
 
+    if(network.telnet_port == 0)
+        network.telnet_port = NETWORK_TELNET_PORT;
+    if(network.websocket_port == 0)
+        network.websocket_port = NETWORK_WEBSOCKET_PORT;
+    if(network.http_port == 0)
+        network.http_port = NETWORK_HTTP_PORT;
+    if(network.ftp_port == 0)
+        network.ftp_port = NETWORK_FTP_PORT;
+
     //
     // Lower the priority of the Ethernet interrupt handler to less than
     // configMAX_SYSCALL_INTERRUPT_PRIORITY.  This is required so that the
@@ -262,7 +331,7 @@ bool enet_start (void)
     // Set the link status based on the LED0 signal (which defaults to link
     // status in the PHY).
     //
-    linkUp = PREF(GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_3)) != 0;
+    // linkUp = PREF(GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_3)) != 0;
 
 //    SysCtlMOSCConfigSet(SYSCTL_MOSC_HIGHFREQ);
     // Register ethernet IRQ handler here, this since the driver layer does not do that
@@ -278,13 +347,15 @@ bool enet_start (void)
     else
         lwIPInit(configCPU_CLOCK_HZ, MACAddress, ntohl(*(uint32_t *)network.ip), ntohl(*(uint32_t *)network.mask), ntohl(*(uint32_t *)network.gateway), network.ip_mode == IpMode_Static ? IPADDR_USE_STATIC : IPADDR_USE_AUTOIP);
 
+#if MDNS_ENABLE || SSDP_ENABLE
+    netif_default->flags |= NETIF_FLAG_IGMP;
+// TODO: set EMACHashFilterSet for UDP multicast address filtering?
+#endif
+
 #if LWIP_NETIF_HOSTNAME
     extern struct netif *netif_default;
     netif_set_hostname(netif_default, network.hostname);
 #endif
-
-    // Setup the remaining services inside the TCP/IP thread's context.
-    tcpip_callback(setupServices, 0);
 
     return true;
 }

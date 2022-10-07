@@ -1768,6 +1768,7 @@ bool driver_init (void)
 #ifdef __MSP432E401Y__
   #ifdef FreeRTOS
     hal.info = "MSP432E401Y FreeRTOS";
+    hal.driver_url = "https://github.com/grblHAL/MSP432E401Y";
   #else
     hal.info = "MSP432E401Y";
   #endif
@@ -1780,6 +1781,9 @@ bool driver_init (void)
 #endif
 #ifdef BOARD_NAME
     hal.board = BOARD_NAME;
+#endif
+#ifdef BOARD_URL
+    hal.board_url = BOARD_URL;
 #endif
     hal.driver_version = "220922";
     hal.driver_setup = driver_setup;
