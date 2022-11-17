@@ -1,7 +1,7 @@
 //
 // enet.c - lwIP/FreeRTOS TCP/IP stream implementation
 //
-// v1.4 / 2022-09-13 / Io Engineering / Terje
+// v1.4 / 2022-11-17 / Io Engineering / Terje
 //
 
 /*
@@ -115,12 +115,12 @@ network_info_t *networking_get_info (void)
     struct netif *netif = netif_default; // netif_get_by_index(0);
 
     if(netif) {
-
+#ifdef PART_TM4C123GH6PM
         if(linkUp) {
             ip4addr_ntoa_r(netif_ip_gw4(netif), info.status.gateway, IP4ADDR_STRLEN_MAX);
             ip4addr_ntoa_r(netif_ip_netmask4(netif), info.status.mask, IP4ADDR_STRLEN_MAX);
         }
-
+#endif
         sprintf(info.mac, "%02X:%02X:%02X:%02X:%02X:%02X", netif->hwaddr[0], netif->hwaddr[1], netif->hwaddr[2], netif->hwaddr[3], netif->hwaddr[4], netif->hwaddr[5]);
     }
 
@@ -566,6 +566,13 @@ bool enet_init (void)
     }
 
     return nvs_address != 0;
+}
+
+#else
+
+void lwIPHostTimerHandler (void)
+{
+    // NOOP
 }
 
 #endif

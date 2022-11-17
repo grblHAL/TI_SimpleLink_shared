@@ -27,9 +27,9 @@
 // Uncomment to enable.
 
 //#define SAFETY_DOOR_ENABLE 1 // Enable safety door input.
-#define WEBUI_ENABLE       1 // Enable ESP3D-WEBUI plugin along with networking and SD card plugins.
-#define ETHERNET_ENABLE    1 // Ethernet streaming. Requires networking plugin.
-#define SDCARD_ENABLE      1 // Run gcode programs from SD card, requires sdcard plugin.
+//#define WEBUI_ENABLE       1 // Enable ESP3D-WEBUI plugin along with networking and SD card plugins.
+//#define ETHERNET_ENABLE    1 // Ethernet streaming. Requires networking plugin.
+//#define SDCARD_ENABLE      1 // Run gcode programs from SD card, requires sdcard plugin.
 //#define LITTLEFS_ENABLE    1 // Enable flash based storage, automatically enabled if WebUI is enabled
 //#define MPG_ENABLE         1 // Enable MPG interface. Requires serial port and one handshake pin unless
                                // KEYPAD_ENABLE is set to 2 when mode switching is done by the CMD_MPG_MODE_TOGGLE (0x8B)
