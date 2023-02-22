@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2022 Terje Io
+  Copyright (c) 2018-2023 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -202,21 +202,6 @@ void laser_ppi_mode (bool on);
 #endif
 #ifndef Z_DIRECTION_PORT
 #define Z_DIRECTION_PORT DIRECTION_PORT
-#endif
-
-#ifdef CONTROL_PORT
-#ifndef RESET_PORT
-#define RESET_PORT          CONTROL_PORT
-#endif
-#ifndef FEED_HOLD_PORT
-#define FEED_HOLD_PORT      CONTROL_PORT
-#endif
-#ifndef CYCLE_START_PORT
-#define CYCLE_START_PORT    CONTROL_PORT
-#endif
-#ifndef SAFETY_DOOR_PORT
-#define SAFETY_DOOR_PORT    CONTROL_PORT
-#endif
 #endif
 
 typedef struct {

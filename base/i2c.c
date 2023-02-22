@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2021 Terje Io
+  Copyright (c) 2018-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -48,9 +48,7 @@ typedef struct {
     uint8_t count;
     uint8_t *data;
     bool getKeycode;
-#if KEYPAD_ENABLE == 1
     keycode_callback_ptr keycode_callback;
-#endif
     uint8_t buffer[8];
 } i2c_trans_t;
 
@@ -78,7 +76,7 @@ static uint8_t* I2C_Receive(uint32_t i2cAddr, uint32_t bytes, bool block)
     return i2c.buffer;
 }
 
-static void I2C_Send (uint32_t i2cAddr, uint8_t bytes, bool block)
+bool i2c_send (uint_fast16_t i2cAddr, uint8_t *buf, size_t bytes, bool block)
 {
     i2c.count = bytes - 1;
     i2c.data  = i2c.buffer;
@@ -89,6 +87,8 @@ static void I2C_Send (uint32_t i2cAddr, uint8_t bytes, bool block)
 
     if(block)
         while(i2cIsBusy);
+
+    return true;
 }
 
 static uint8_t *I2C_ReadRegister (uint32_t i2cAddr, uint8_t bytes, bool block)
@@ -109,9 +109,7 @@ static uint8_t *I2C_ReadRegister (uint32_t i2cAddr, uint8_t bytes, bool block)
     return i2c.buffer;
 }
 
-#if KEYPAD_ENABLE == 1
-
-void I2C_GetKeycode (uint32_t i2cAddr, keycode_callback_ptr callback)
+void i2c_get_keycode (uint_fast16_t i2cAddr, keycode_callback_ptr callback)
 {
     while(i2cIsBusy);
 
@@ -119,8 +117,6 @@ void I2C_GetKeycode (uint32_t i2cAddr, keycode_callback_ptr callback)
 
     I2C_Receive(i2cAddr, 1, false);
 }
-
-#endif
 
 #if TRINAMIC_ENABLE && TRINAMIC_I2C
 
@@ -135,7 +131,7 @@ TMC_spi_status_t tmc_spi_read (trinamic_motor_t driver, TMC_spi_datagram_t *data
 
     if(driver.axis != axis) {
         i2c.buffer[0] = driver.axis | 0x80;;
-        I2C_Send(I2C_ADR_I2CBRIDGE, 1, true);
+        i2c_send(I2C_ADR_I2CBRIDGE, 1, true);
 
         axis = driver.axis;
     }
@@ -165,7 +161,7 @@ TMC_spi_status_t tmc_spi_write (trinamic_motor_t driver, TMC_spi_datagram_t *dat
 
     if(driver.axis != axis) {
         i2c.buffer[0] = driver.axis | 0x80;;
-        I2C_Send(I2C_ADR_I2CBRIDGE, 1, true);
+        i2c_send(I2C_ADR_I2CBRIDGE, 1, true);
 
         while(i2cIsBusy);
 
@@ -180,14 +176,14 @@ TMC_spi_status_t tmc_spi_write (trinamic_motor_t driver, TMC_spi_datagram_t *dat
     i2c.buffer[4] = datagram->payload.value & 0xFF;
     datagram->addr.write = 0;
 
-    I2C_Send(I2C_ADR_I2CBRIDGE, 5, true);
+    i2c_send(I2C_ADR_I2CBRIDGE, 5, true);
 
     return status;
 }
 
 #endif
 
-void I2CInit (void)
+void i2c_init (void)
 {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C0);
     SysCtlPeripheralReset(SYSCTL_PERIPH_I2C0);
@@ -291,13 +287,11 @@ static void I2C_interrupt_handler (void)
             *i2c.data = I2CMasterDataGet(I2C0_BASE);
             i2c.count = 0;
             i2c.state = I2CState_Idle;
-          #if KEYPAD_ENABLE == 1
             if(i2c.keycode_callback) {
                   //  if(GPIOIntStatus(I2C_STROBE_PORT, I2C_STROBE_BIT) != 0) { // only add keycode when key is still pressed
                 i2c.keycode_callback(*i2c.data);
                 i2c.keycode_callback = NULL;
             }
-          #endif
             break;
     }
 }

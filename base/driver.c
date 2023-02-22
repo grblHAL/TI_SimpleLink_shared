@@ -35,6 +35,7 @@
 #include "grbl/protocol.h"
 #include "grbl/state_machine.h"
 #include "grbl/motor_pins.h"
+#include "grbl/pin_bits_masks.h"
 
 #ifdef FreeRTOS
 #include "FreeRTOS.h"
@@ -1795,7 +1796,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "230130";
+    hal.driver_version = "230220";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1848,7 +1849,7 @@ bool driver_init (void)
     stream_connect(serialInit(115200));
 
 #if I2C_ENABLE
-    I2CInit();
+    i2c_init();
 #endif
 
     eeprom_init();
