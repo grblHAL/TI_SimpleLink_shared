@@ -1462,7 +1462,7 @@ static char *port2char (uint32_t port)
 
 static void enumeratePins (bool low_level, pin_info_ptr pin_info, void *data)
 {
-    static xbar_t pin = {0};
+    static xbar_t pin = {};
     uint32_t i = sizeof(inputpin) / sizeof(input_signal_t);
 
     pin.mode.input = On;
@@ -1796,7 +1796,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "230220";
+    hal.driver_version = "230331";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1893,6 +1893,7 @@ bool driver_init (void)
 #ifdef SAFETY_DOOR_BIT
     hal.signals_cap.safety_door_ajar = On;
 #endif
+    hal.limits_cap = get_limits_cap();
 #if SPINDLE_SYNC_ENABLE
     hal.driver_cap.spindle_sync = On;
 #endif
