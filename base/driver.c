@@ -627,10 +627,8 @@ static void stepperWakeUp (void)
     // Enable stepper drivers.
     stepperEnable((axes_signals_t){AXES_BITMASK});
 
-    TimerLoadSet(STEPPER_TIMER_BASE, TIMER_A, 5000);    // dummy...
+    TimerLoadSet(STEPPER_TIMER_BASE, TIMER_A, hal.f_step_timer / 500); // ~2ms delay to allow drivers time to wake up.
     TimerEnable(STEPPER_TIMER_BASE, STEPPER_TIMER);
-
-    hal.stepper.interrupt_callback(); // Start the show...
 }
 
 // Disables stepper driver interrupts and reset outputs
@@ -1796,7 +1794,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "230331";
+    hal.driver_version = "230511";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
