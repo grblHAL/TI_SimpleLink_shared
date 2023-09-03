@@ -842,11 +842,11 @@ static void stepperPulseStartPPI (stepper_t *stepper)
 #endif
 
 // Enable/disable limit pins interrupt
-static void limitsEnable (bool on, bool homing)
+static void limitsEnable (bool on, axes_signals_t homing_cycle)
 {
     uint32_t i = limit_inputs.n_pins;
 
-    on &= settings.limits.flags.hard_enabled;
+    on &= homing_cycle.mask == 0;
 
     do {
         i--;
@@ -930,7 +930,7 @@ static void probeConfigure (bool is_probe_away, bool probing)
 }
 
 // Returns the probe connected and pin states.
-probe_state_t probeGetState (void)
+static probe_state_t probeGetState (void)
 {
     probe_state_t state = {0};
 
@@ -1794,7 +1794,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "230511";
+    hal.driver_version = "230828";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1892,6 +1892,7 @@ bool driver_init (void)
     hal.signals_cap.safety_door_ajar = On;
 #endif
     hal.limits_cap = get_limits_cap();
+    hal.home_cap = get_home_cap();
 #if SPINDLE_SYNC_ENABLE
     hal.driver_cap.spindle_sync = On;
 #endif
