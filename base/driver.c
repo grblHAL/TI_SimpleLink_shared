@@ -844,18 +844,27 @@ static void stepperPulseStartPPI (stepper_t *stepper)
 // Enable/disable limit pins interrupt
 static void limitsEnable (bool on, axes_signals_t homing_cycle)
 {
-    uint32_t i = limit_inputs.n_pins;
-
-    on &= homing_cycle.mask == 0;
+    bool disable = !on;
+    axes_signals_t pin;
+    input_signal_t *limit;
+    uint_fast8_t idx = limit_inputs.n_pins;
+    limit_signals_t homing_source = xbar_get_homing_source_from_cycle(homing_cycle);
 
     do {
-        i--;
-        GPIOIntClear(limit_inputs.pins.inputs[i].port, limit_inputs.pins.inputs[i].bit);       // Clear interrupt.
-        if(on)
-            GPIOIntEnable(limit_inputs.pins.inputs[i].port, limit_inputs.pins.inputs[i].bit);  // Enable interrupt.
-        else
-            GPIOIntDisable(limit_inputs.pins.inputs[i].port, limit_inputs.pins.inputs[i].bit); // Disable interrupt.
-    } while(i);
+        limit = &limit_inputs.pins.inputs[--idx];
+        if(limit->group & (PinGroup_Limit|PinGroup_LimitMax)) {
+            if(on && homing_cycle.mask) {
+                pin = xbar_fn_to_axismask(limit->id);
+                disable = limit->group == PinGroup_Limit ? (pin.mask & homing_source.min.mask) : (pin.mask & homing_source.max.mask);
+            }
+            if(disable)
+                GPIOIntDisable(limit->port, limit->bit);    // Disable pin change interrupt.
+            else {
+                GPIOIntClear(limit->port, limit->bit);      // Clear and
+                GPIOIntEnable(limit->port, limit->bit);     // enable pin change interrupt.
+            }
+       }
+    } while(idx);
 }
 
 // Returns limit state as an axes_signals_t variable.
@@ -1794,7 +1803,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "230828";
+    hal.driver_version = "230907";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
