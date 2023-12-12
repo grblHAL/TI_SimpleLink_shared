@@ -172,12 +172,34 @@
 #define HWDIRECTION_MASK2       (A_DIRECTION_PIN|B_DIRECTION_PIN|C_DIRECTION_PIN)
 #endif
 
-// Define spindle enable and spindle direction output pins.
-#define SPINDLE_ENABLE_PORT     GPIO_PORTD_BASE
-#define SPINDLE_ENABLE_PIN      6
+// Define driver spindle pins
 
+#if DRIVER_SPINDLE_PWM_ENABLE
+#define SPINDLE_PWM_PORT        GPIO_PORTM_BASE
+#define SPINDLE_PWM_PIN         3
+#define SPINDLE_PWM_BIT         (1<<SPINDLE_PWM_PIN)
+#define SPINDLE_PWM_MAP         GPIO_PM3_T3CCP1
+
+#else
+#define AUXOUTPUT3_PORT         GPIO_PORTM_BASE
+#define AUXOUTPUT3_PIN          3
+#endif
+
+#if DRIVER_SPINDLE_DIR_ENABLE
 #define SPINDLE_DIRECTION_PORT  GPIO_PORTM_BASE
 #define SPINDLE_DIRECTION_PIN   4
+#else
+#define AUXOUTPUT4_PORT         GPIO_PORTM_BASE
+#define AUXOUTPUT4_PIN          4
+#endif
+
+#if DRIVER_SPINDLE_ENABLE
+#define SPINDLE_ENABLE_PORT     GPIO_PORTD_BASE
+#define SPINDLE_ENABLE_PIN      6
+#else
+#define AUXOUTPUT5_PORT         GPIO_PORTD_BASE
+#define AUXOUTPUT5_PIN          6
+#endif
 
 // Define flood and mist coolant enable output pins.
 #define COOLANT_FLOOD_PORT      GPIO_PORTL_BASE
@@ -222,12 +244,6 @@
 // Define probe switch input pin.
 #define PROBE_PORT              GPIO_PORTC_BASE
 #define PROBE_PIN               7
-
-// Start of PWM & Stepper Enabled Spindle
-#define SPINDLE_PWM_PORT        GPIO_PORTM_BASE
-#define SPINDLE_PWM_PIN         3
-#define SPINDLE_PWM_BIT         (1<<SPINDLE_PWM_PIN)
-#define SPINDLE_PWM_MAP         GPIO_PM3_T3CCP1
 
 /*
  * CNC Boosterpack GPIO assignments
