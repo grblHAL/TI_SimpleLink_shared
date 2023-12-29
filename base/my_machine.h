@@ -26,21 +26,31 @@
 // Configuration
 // Uncomment to enable.
 
-//#define SAFETY_DOOR_ENABLE 1 // Enable safety door input.
-//#define WEBUI_ENABLE       1 // Enable ESP3D-WEBUI plugin along with networking and SD card plugins.
-//#define ETHERNET_ENABLE    1 // Ethernet streaming. Requires networking plugin.
-//#define SDCARD_ENABLE      1 // Run gcode programs from SD card, requires sdcard plugin.
-//#define LITTLEFS_ENABLE    1 // Enable flash based storage, automatically enabled if WebUI is enabled
-//#define MPG_ENABLE         1 // Enable MPG interface. Requires serial port and one handshake pin unless
-                               // KEYPAD_ENABLE is set to 2 when mode switching is done by the CMD_MPG_MODE_TOGGLE (0x8B)
-                               // command character. Set both MPG_ENABLE and KEYPAD_ENABLE to 2 to use a handshake pin anyway.
-//#define KEYPAD_ENABLE      1 // Set to 1 for I2C keypad, 2 for other input such as serial data. If KEYPAD_ENABLE is set to 2
-                               // and MPG_ENABLE is uncommented then a serial stream is shared with the MPG.
-//#define PWM_RAMPED         1 // Ramped spindle PWM.
-//#define LASER_PPI          1 // Laser PPI (Pulses Per Inch) option.
-//#define TRINAMIC_ENABLE 2130 // Trinamic TMC2130 stepper driver support. NOTE: work in progress.
-//#define TRINAMIC_ENABLE 5160 // Trinamic TMC5160 stepper driver support. NOTE: work in progress.
-//#define TRINAMIC_I2C       0 // Trinamic I2C - SPI bridge interface.
+//#define WEBUI_ENABLE            1 // Enable ESP3D-WEBUI plugin along with networking and SD card plugins.
+//#define ETHERNET_ENABLE         1 // Ethernet streaming. Requires networking plugin.
+//#define SDCARD_ENABLE           1 // Run gcode programs from SD card, requires sdcard plugin.
+//#define LITTLEFS_ENABLE         1 // Enable flash based storage, automatically enabled if WebUI is enabled
+//#define MPG_ENABLE              1 // Enable MPG interface. Requires serial port and one handshake pin unless
+                                    // KEYPAD_ENABLE is set to 2 when mode switching is done by the CMD_MPG_MODE_TOGGLE (0x8B)
+                                    // command character. Set both MPG_ENABLE and KEYPAD_ENABLE to 2 to use a handshake pin anyway.
+//#define KEYPAD_ENABLE           1 // Set to 1 for I2C keypad, 2 for other input such as serial data. If KEYPAD_ENABLE is set to 2
+                                    // and MPG_ENABLE is uncommented then a serial stream is shared with the MPG.
+//#define PWM_RAMPED              1 // Ramped spindle PWM.
+//#define LASER_PPI               1 // Laser PPI (Pulses Per Inch) option.
+//#define TRINAMIC_ENABLE      2130 // Trinamic TMC2130 stepper driver support. NOTE: work in progress.
+//#define TRINAMIC_ENABLE      5160 // Trinamic TMC5160 stepper driver support. NOTE: work in progress.
+//#define TRINAMIC_I2C            0 // Trinamic I2C - SPI bridge interface.
+// Optional control signals:
+// These will be assigned to aux input pins. Use the $pins command to check which pins are assigned.
+// NOTE: If not enough pins are available assignment will silently fail.
+//#define SAFETY_DOOR_ENABLE      1
+//#define MOTOR_FAULT_ENABLE      1
+//#define MOTOR_WARNING_ENABLE    1
+//#define PROBE_DISCONNECT_ENABLE 1
+//#define STOP_DISABLE_ENABLE     1
+//#define BLOCK_DELETE_ENABLE     1
+//#define SINGLE_BLOCK_ENABLE     1
+//#define LIMITS_OVERRIDE_ENABLE  1
 
 #ifdef BOARD_CNC_BOOSTERPACK
 //#define CNC_BOOSTERPACK_SHORTS  1 // Shorts added to BoosterPack for some signals (for faster and simpler driver)

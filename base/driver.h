@@ -239,9 +239,7 @@ typedef struct {
 void board_init(pin_group_pins_t *aux_inputs, pin_group_pins_t *aux_outputs);
 #endif
 
-#ifdef HAS_IOPORTS
 void ioports_init(pin_group_pins_t *aux_inputs, pin_group_pins_t *aux_outputs);
 void ioports_event (input_signal_t *input);
-#endif
 
 #endif

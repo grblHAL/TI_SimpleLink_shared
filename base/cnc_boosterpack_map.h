@@ -29,8 +29,6 @@
 #endif
 #define BOARD_URL "https://github.com/terjeio/CNC_Boosterpack"
 
-#define HAS_IOPORTS
-
 #if TRINAMIC_ENABLE
 #ifdef TRINAMIC_MIXED_DRIVERS
 #undef TRINAMIC_MIXED_DRIVERS
@@ -208,6 +206,20 @@
 #define COOLANT_MIST_PORT       GPIO_PORTL_BASE
 #define COOLANT_MIST_PIN        2
 
+
+#if CNC_BOOSTERPACK
+#if CNC_BOOSTERPACK_SHORTS
+#define AUXINPUT7_PORT          GPIO_PORTL_BASE
+#define AUXINPUT7_PIN           0
+#else
+#define AUXINPUT7_PORT          GPIO_PORTG_BASE
+#define AUXINPUT7_PIN           0
+#endif
+#else
+#define AUXINPUT7_PORT          GPIO_PORTC_BASE
+#define AUXINPUT7_PIN           4
+#endif
+
 // Define user-control CONTROLs (cycle start, reset, feed hold) input pins.
 #if CNC_BOOSTERPACK
   #if CNC_BOOSTERPACK_SHORTS
@@ -216,9 +228,6 @@
     #define RESET_PIN           0
     #define FEED_HOLD_PIN       4
     #define CYCLE_START_PIN     5
-#if SAFETY_DOOR_ENABLE
-    #define SAFETY_DOOR_PIN     0
-#endif
   #else
     #define RESET_PORT          GPIO_PORTF_BASE
     #define RESET_PIN           3
@@ -226,19 +235,17 @@
     #define FEED_HOLD_PIN       4
     #define CYCLE_START_PORT    GPIO_PORTL_BASE
     #define CYCLE_START_PIN     5
-#if SAFETY_DOOR_ENABLE
-    #define SAFETY_DOOR_PORT    GPIO_PORTG_BASE
-    #define SAFETY_DOOR_PIN     0
-#endif
   #endif
 #else
 #define CONTROL_PORT            GPIO_PORTC_BASE
 #define RESET_PIN               7
 #define FEED_HOLD_PIN           6
 #define CYCLE_START_PIN         5
-#if SAFETY_DOOR_ENABLE
-#define SAFETY_DOOR_PIN         4
 #endif
+
+#if SAFETY_DOOR_ENABLE
+#define SAFETY_DOOR_PORT        AUXINPUT7_PORT
+#define SAFETY_DOOR_PIN         AUXINPUT7_PIN
 #endif
 
 // Define probe switch input pin.
@@ -315,6 +322,11 @@
 #else
 #define AUXINPUT6_PORT          AUXIO6_PORT
 #define AUXINPUT6_PIN           AUXIO6_PIN
+#endif
+
+#if MOTOR_FAULT_ENABLE && defined(AUXINPUT6_PORT)
+#define MOTOR_FAULT_PORT        AUXINPUT6_PORT
+#define MOTOR_FAULT_PIN         AUXINPUT6_PIN
 #endif
 
 /**/
