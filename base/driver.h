@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2023 Terje Io
+  Copyright (c) 2018-2024 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -215,6 +215,7 @@ typedef struct {
     pin_irq_mode_t irq_mode;
     pin_mode_t cap;
     ioport_interrupt_callback_ptr interrupt_callback;
+    aux_ctrl_t *aux_ctrl;
     const char *description;
 } input_signal_t;
 
