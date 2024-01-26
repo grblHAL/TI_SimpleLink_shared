@@ -1198,17 +1198,17 @@ static void disable_irq (void)
 
 #if  MPG_MODE == 1
 
-static void mpg_select (sys_state_t state)
+static void mpg_select (void *data)
 {
     stream_mpg_enable(GPIOPinRead(MPG_MODE_PORT, MPG_MODE_BIT) == 0);
 
     GPIOIntEnable(MPG_MODE_PORT, MPG_MODE_BIT);
 }
 
-static void mpg_enable (sys_state_t state)
+static void mpg_enable (void *data)
 {
     if(sys.mpg_mode == (GPIOPinRead(MPG_MODE_PORT, MPG_MODE_BIT) == 0))
-        mpg_select(state);
+        mpg_select(data);
 
 #if I2C_STROBE_ENABLE
 //    BITBAND_PERI(I2C_STROBE_PORT->IE, I2C_STROBE_PIN) = 1;
@@ -1947,7 +1947,7 @@ bool driver_init (void)
             if(aux_inputs.pins.inputs == NULL)
                 aux_inputs.pins.inputs = input;
             input->id = (pin_function_t)(Input_Aux0 + aux_inputs.n_pins++);
-            input->cap.pull_mode = PullMode_UpDown;
+            input->mode.pull_mode = input->cap.pull_mode = PullMode_Up;
             input->cap.irq_mode = IRQ_Mode_Rising|IRQ_Mode_Falling;
 #if SAFETY_DOOR_ENABLE
             if(input->port == SAFETY_DOOR_PORT && input->pin == SAFETY_DOOR_PIN && input->cap.irq_mode != IRQ_Mode_None){
@@ -2015,10 +2015,10 @@ bool driver_init (void)
 #if MPG_MODE == 1
   #if KEYPAD_ENABLE == 2
     if((hal.driver_cap.mpg_mode = stream_mpg_register(stream_open_instance(MPG_STREAM, 115200, NULL), false, keypad_enqueue_keycode)))
-        protocol_enqueue_rt_command(mpg_enable);
+        protocol_enqueue_foreground_task(mpg_enable, NULL);
   #else
     if((hal.driver_cap.mpg_mode = stream_mpg_register(stream_open_instance(MPG_STREAM, 115200, NULL), false, NULL)))
-        protocol_enqueue_rt_command(mpg_enable);
+        protocol_enqueue_foreground_task(mpg_enable, NULL);
   #endif
 #elif MPG_MODE == 2
     hal.driver_cap.mpg_mode = stream_mpg_register(stream_open_instance(MPG_STREAM, 115200, NULL), false, keypad_enqueue_keycode);
@@ -2155,7 +2155,7 @@ static /* inline __attribute__((always_inline))*/ IRQHandler (input_signal_t *in
 #if  MPG_MODE == 1
                 case PinGroup_MPG:
                     GPIOIntDisable(MPG_MODE_PORT, MPG_MODE_BIT);
-                    protocol_enqueue_rt_command(mpg_select);
+                    protocol_enqueue_foreground_task(mpg_select, NULL);
                     break;
 #endif
 
