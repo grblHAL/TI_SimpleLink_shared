@@ -1816,7 +1816,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "231229";
+    hal.driver_version = "240202";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
