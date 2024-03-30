@@ -1860,7 +1860,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "240218";
+    hal.driver_version = "240330";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1972,7 +1972,12 @@ bool driver_init (void)
 
     hal.limits_cap = get_limits_cap();
     hal.home_cap = get_home_cap();
-    hal.driver_cap.mist_control = On;
+#ifdef COOLANT_FLOOD_PIN
+    hal.coolant_cap.flood = On;
+#endif
+#ifdef COOLANT_MIST_PIN
+    hal.coolant_cap.mist = On;
+#endif
     hal.driver_cap.software_debounce = On;
     hal.driver_cap.step_pulse_delay = On;
     hal.driver_cap.amass_level = 3;
