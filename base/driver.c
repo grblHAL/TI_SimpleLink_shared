@@ -600,7 +600,7 @@ inline static __attribute__((always_inline)) void set_dir_outputs (axes_signals_
 }
 
 // Enable/disable steppers
-static void stepperEnable (axes_signals_t enable)
+static void stepperEnable (axes_signals_t enable, bool hold)
 {
     enable.mask ^= settings.steppers.enable_invert.mask;
 #if TRINAMIC_MOTOR_ENABLE
@@ -638,7 +638,7 @@ static void stepperWakeUp (void)
 #endif
 
     // Enable stepper drivers.
-    hal.stepper.enable((axes_signals_t){AXES_BITMASK});
+    hal.stepper.enable((axes_signals_t){AXES_BITMASK}, false);
 
     TimerLoadSet(STEPPER_TIMER_BASE, TIMER_A, hal.f_step_timer / 500); // ~2ms delay to allow drivers time to wake up.
     TimerEnable(STEPPER_TIMER_BASE, STEPPER_TIMER);
@@ -1860,7 +1860,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "240817";
+    hal.driver_version = "240928";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1926,6 +1926,11 @@ bool driver_init (void)
 
     static const spindle_ptrs_t spindle = {
         .type = SpindleType_PWM,
+#if DRIVER_SPINDLE_DIR_ENABLE
+        .ref_id = SPINDLE_PWM0,
+#else
+        .ref_id = SPINDLE_PWM0_NODIR,
+#endif
         .config = spindleConfig,
         .set_state = spindleSetStateVariable,
         .get_state = spindleGetState,
@@ -1952,6 +1957,11 @@ bool driver_init (void)
 
     static const spindle_ptrs_t spindle = {
         .type = SpindleType_Basic,
+#if DRIVER_SPINDLE_DIR_ENABLE
+        .ref_id = SPINDLE_ONOFF0_DIR,
+#else
+        .ref_id = SPINDLE_ONOFF0,
+#endif
         .set_state = spindleSetState,
         .get_state = spindleGetState,
         .cap = {
