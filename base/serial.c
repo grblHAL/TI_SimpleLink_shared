@@ -42,7 +42,6 @@ static io_stream_properties_t serial[] = {
       .instance = 0,
       .flags.claimable = On,
       .flags.claimed = Off,
-      .flags.connected = On,
       .flags.can_set_baud = Off,
       .claim = serialInit
     },
@@ -52,7 +51,6 @@ static io_stream_properties_t serial[] = {
       .instance = 1,
       .flags.claimable = On,
       .flags.claimed = Off,
-      .flags.connected = On,
       .flags.can_set_baud = Off,
       .claim = serial2Init
     }
