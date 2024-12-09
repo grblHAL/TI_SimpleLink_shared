@@ -1005,17 +1005,17 @@ static bool aux_claim_explicit (aux_ctrl_t *aux_ctrl)
 
 inline static void spindle_off ()
 {
-    DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_PIN, settings.spindle.invert.on);
+    DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_PIN, settings.pwm_spindle.invert.on);
 }
 
 inline static void spindle_on ()
 {
-    DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_PIN, !settings.spindle.invert.on);
+    DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_PIN, !settings.pwm_spindle.invert.on);
 }
 
 inline static void spindle_dir (bool ccw)
 {
-    DIGITAL_OUT(SPINDLE_DIRECTION_PORT, SPINDLE_DIRECTION_PIN, (ccw ^ settings.spindle.invert.ccw));
+    DIGITAL_OUT(SPINDLE_DIRECTION_PORT, SPINDLE_DIRECTION_PIN, (ccw ^ settings.pwm_spindle.invert.ccw));
 }
 
 // Start or stop spindle
@@ -1074,15 +1074,15 @@ static void spindleSetSpeed (spindle_ptrs_t *spindle, uint_fast16_t pwm_value)
     if (pwm_value == spindle->context.pwm->off_value) {
         pwmEnabled = false;
         if(spindle->context.pwm->settings->flags.enable_rpm_controlled) {
-            if(spindle->context.pwm->cloned)
+            if(spindle->context.pwm->flags.cloned)
                 spindle_dir(false);
             else
                 spindle_off();
         }
-        if(spindle->context.pwm->always_on) {
+        if(spindle->context.pwm->flags.always_on) {
             TimerPrescaleMatchSet(SPINDLE_PWM_TIMER_BASE, TIMER_B, spindle->context.pwm->off_value >> 16);
             TimerMatchSet(SPINDLE_PWM_TIMER_BASE, TIMER_B, spindle->context.pwm->off_value & 0xFFFF);
-            TimerControlLevel(SPINDLE_PWM_TIMER_BASE, TIMER_B, !settings.spindle.invert.pwm);
+            TimerControlLevel(SPINDLE_PWM_TIMER_BASE, TIMER_B, !settings.pwm_spindle.invert.pwm);
             TimerEnable(SPINDLE_PWM_TIMER_BASE, TIMER_B); // Ensure PWM output is enabled.
         } else {
             uint_fast16_t pwm = spindle->context.pwm->period + 20000;
@@ -1097,14 +1097,14 @@ static void spindleSetSpeed (spindle_ptrs_t *spindle, uint_fast16_t pwm_value)
         TimerPrescaleMatchSet(SPINDLE_PWM_TIMER_BASE, TIMER_B, pwm_value >> 16);
         TimerMatchSet(SPINDLE_PWM_TIMER_BASE, TIMER_B, pwm_value & 0xFFFF);
         if(!pwmEnabled) {
-            if(spindle->context.pwm->cloned)
+            if(spindle->context.pwm->flags.cloned)
                 spindle_dir(true);
             else
                 spindle_on();
             pwmEnabled = true;
             TimerPrescaleSet(SPINDLE_PWM_TIMER_BASE, TIMER_B, spindle->context.pwm->period >> 16);
             TimerLoadSet(SPINDLE_PWM_TIMER_BASE, TIMER_B, spindle->context.pwm->period & 0xFFFF);
-            TimerControlLevel(SPINDLE_PWM_TIMER_BASE, TIMER_B, !settings.spindle.invert.pwm);
+            TimerControlLevel(SPINDLE_PWM_TIMER_BASE, TIMER_B, !settings.pwm_spindle.invert.pwm);
             TimerEnable(SPINDLE_PWM_TIMER_BASE, TIMER_B); // Ensure PWM output is enabled.
         }
     }
@@ -1121,7 +1121,7 @@ static uint_fast16_t spindleGetPWM (spindle_ptrs_t *spindle, float rpm)
 static void spindleSetStateVariable (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
 {
 #ifdef SPINDLE_DIRECTION_PIN
-    if (state.on || spindle->context.pwm->cloned)
+    if (state.on || spindle->context.pwm->flags.cloned)
         spindle_dir(state.ccw);
 #endif
     if(!spindle->context.pwm->settings->flags.enable_rpm_controlled) {
@@ -1131,7 +1131,7 @@ static void spindleSetStateVariable (spindle_ptrs_t *spindle, spindle_state_t st
             spindle_off();
     }
 
-    spindleSetSpeed(spindle, state.on || (state.ccw && spindle->context.pwm->cloned)
+    spindleSetSpeed(spindle, state.on || (state.ccw && spindle->context.pwm->flags.cloned)
                               ? spindle->context.pwm->compute_value(spindle->context.pwm, rpm, false)
                               : spindle->context.pwm->off_value);
 }
@@ -1143,7 +1143,7 @@ bool spindleConfig (spindle_ptrs_t *spindle)
 
     spindle_pwm.offset = -1;
 
-    if(spindle_precompute_pwm_values(spindle, &spindle_pwm, &settings.spindle, configCPU_CLOCK_HZ)) {
+    if(spindle_precompute_pwm_values(spindle, &spindle_pwm, &settings.pwm_spindle, configCPU_CLOCK_HZ)) {
         TimerPrescaleSet(SPINDLE_PWM_TIMER_BASE, TIMER_B, spindle_pwm.period >> 16);
         TimerLoadSet(SPINDLE_PWM_TIMER_BASE, TIMER_B, spindle_pwm.period & 0xFFFF);
         spindle->set_state = spindleSetStateVariable;
@@ -1163,14 +1163,14 @@ bool spindleConfig (spindle_ptrs_t *spindle)
 // Returns spindle state in a spindle_state_t variable
 static spindle_state_t spindleGetState (spindle_ptrs_t *spindle)
 {
-    spindle_state_t state = { settings.spindle.invert.mask };
+    spindle_state_t state = { settings.pwm_spindle.invert.mask };
 
     UNUSED(spindle);
 
     state.on = DIGITAL_IN(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_PIN);
     state.ccw = DIGITAL_IN(SPINDLE_DIRECTION_PORT, SPINDLE_DIRECTION_PIN);
 
-    state.mask ^= settings.spindle.invert.mask;
+    state.mask ^= settings.pwm_spindle.invert.mask;
 
     if(pwmEnabled)
         state.on = On;
@@ -1186,7 +1186,7 @@ static spindle_state_t spindleGetState (spindle_ptrs_t *spindle)
 // Start/stop coolant (and mist if enabled)
 static void coolantSetState (coolant_state_t mode)
 {
-    mode.mask ^= settings.coolant_invert.mask;
+    mode.mask ^= settings.coolant.invert.mask;
     DIGITAL_OUT(COOLANT_FLOOD_PORT, COOLANT_FLOOD_PIN, mode.flood);
     DIGITAL_OUT(COOLANT_MIST_PORT, COOLANT_MIST_PIN, mode.mist);
 }
@@ -1198,7 +1198,7 @@ static coolant_state_t coolantGetState (void)
 
     state.flood = DIGITAL_IN(COOLANT_FLOOD_PORT, COOLANT_FLOOD_PIN);
     state.mist  = DIGITAL_IN(COOLANT_MIST_PORT, COOLANT_MIST_PIN);
-    state.mask ^= settings.coolant_invert.mask;
+    state.mask ^= settings.coolant.invert.mask;
 
     return state;
 }
@@ -1758,7 +1758,7 @@ static bool driver_setup (settings_t *settings)
 
   // Set defaults
 
-    IOInitDone = settings->version.id == 22;
+    IOInitDone = settings->version.id == 23;
 
     hal.settings_changed(settings, (settings_changed_flags_t){0});
 
@@ -1860,7 +1860,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "240928";
+    hal.driver_version = "241208";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
