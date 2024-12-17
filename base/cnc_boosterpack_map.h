@@ -170,42 +170,68 @@
 #define HWDIRECTION_MASK2       (A_DIRECTION_PIN|B_DIRECTION_PIN|C_DIRECTION_PIN)
 #endif
 
-// Define driver spindle pins
+/*
+ * CNC Boosterpack GPIO assignments
+ */
 
-#if DRIVER_SPINDLE_PWM_ENABLE
-#define SPINDLE_PWM_PORT        GPIO_PORTM_BASE
-#define SPINDLE_PWM_PIN         3
-#define SPINDLE_PWM_BIT         (1<<SPINDLE_PWM_PIN)
-#define SPINDLE_PWM_MAP         GPIO_PM3_T3CCP1
+#define AUXIO0_PORT             GPIO_PORTL_BASE
+#define AUXIO0_PIN              3
+#define AUXIO1_PORT             GPIO_PORTN_BASE
+#define AUXIO1_PIN              2
+#define AUXIO2_PORT             GPIO_PORTN_BASE
+#define AUXIO2_PIN              3
+#define AUXIO3_PORT             GPIO_PORTP_BASE
+#define AUXIO3_PIN              2
+#define AUXIO4_PORT             GPIO_PORTC_BASE
+#define AUXIO4_PIN              4
+#define AUXIO5_PORT             GPIO_PORTC_BASE
+#define AUXIO5_PIN              5
+#define AUXIO6_PORT             GPIO_PORTC_BASE
+#define AUXIO6_PIN              6
 
-#else
-#define AUXOUTPUT3_PORT         GPIO_PORTM_BASE
+// Output definitions (comment out the port definition if used as input)
+
+#define AUXOUTPUT0_PORT         AUXIO0_PORT
+#define AUXOUTPUT0_PIN          AUXIO0_PIN
+#define AUXOUTPUT1_PORT         AUXIO1_PORT
+#define AUXOUTPUT1_PIN          AUXIO1_PIN
+#define AUXOUTPUT2_PORT         AUXIO3_PORT
+#define AUXOUTPUT2_PIN          AUXIO3_PIN
+#define AUXOUTPUT3_PORT         GPIO_PORTM_BASE // Spindle PWM
 #define AUXOUTPUT3_PIN          3
-#endif
-
-#if DRIVER_SPINDLE_DIR_ENABLE
-#define SPINDLE_DIRECTION_PORT  GPIO_PORTM_BASE
-#define SPINDLE_DIRECTION_PIN   4
-#else
-#define AUXOUTPUT4_PORT         GPIO_PORTM_BASE
+#define AUXOUTPUT4_PORT         GPIO_PORTM_BASE // Spindle direction
 #define AUXOUTPUT4_PIN          4
-#endif
-
-#if DRIVER_SPINDLE_ENABLE
-#define SPINDLE_ENABLE_PORT     GPIO_PORTD_BASE
-#define SPINDLE_ENABLE_PIN      6
-#else
-#define AUXOUTPUT5_PORT         GPIO_PORTD_BASE
+#define AUXOUTPUT5_PORT         GPIO_PORTD_BASE // Spindle enable
 #define AUXOUTPUT5_PIN          6
+#define AUXOUTPUT6_PORT         GPIO_PORTL_BASE // Coolant flood
+#define AUXOUTPUT6_PIN          1
+#define AUXOUTPUT7_PORT         GPIO_PORTL_BASE // Coolant mist
+#define AUXOUTPUT7_PIN          2
+
+// Define driver spindle pins
+#if DRIVER_SPINDLE_ENABLE & SPINDLE_ENA
+#define SPINDLE_ENABLE_PORT     AUXOUTPUT4_PORT
+#define SPINDLE_ENABLE_PIN      AUXOUTPUT4_PIN
+#endif
+#if DRIVER_SPINDLE_ENABLE & SPINDLE_PWM
+#define SPINDLE_PWM_PORT        AUXOUTPUT3_PORT
+#define SPINDLE_PWM_PIN         AUXOUTPUT3_PIN
+#define SPINDLE_PWM_MAP         GPIO_PM3_T3CCP1
+#endif
+#if DRIVER_SPINDLE_ENABLE & SPINDLE_DIR
+#define SPINDLE_DIRECTION_PORT  AUXOUTPUT3_PORT
+#define SPINDLE_DIRECTION_PIN   AUXOUTPUT3_PIN
 #endif
 
 // Define flood and mist coolant enable output pins.
-#define COOLANT_FLOOD_PORT      GPIO_PORTL_BASE
-#define COOLANT_FLOOD_PIN       1
-
-#define COOLANT_MIST_PORT       GPIO_PORTL_BASE
-#define COOLANT_MIST_PIN        2
-
+#if COOLANT_ENABLE & COOLANT_FLOOD
+#define COOLANT_FLOOD_PORT      AUXOUTPUT5_PORT
+#define COOLANT_FLOOD_PIN       AUXOUTPUT5_PIN
+#endif
+#if COOLANT_ENABLE & COOLANT_MIST
+#define COOLANT_MIST_PORT       AUXOUTPUT6_PORT
+#define COOLANT_MIST_PIN        AUXOUTPUT6_PIN
+#endif
 
 #if CNC_BOOSTERPACK
 #if CNC_BOOSTERPACK_SHORTS
@@ -251,36 +277,6 @@
 // Define probe switch input pin.
 #define PROBE_PORT              GPIO_PORTC_BASE
 #define PROBE_PIN               7
-
-/*
- * CNC Boosterpack GPIO assignments
- */
-
-#define AUXIO0_PORT             GPIO_PORTL_BASE
-#define AUXIO0_PIN              3
-#define AUXIO1_PORT             GPIO_PORTN_BASE
-#define AUXIO1_PIN              2
-#define AUXIO2_PORT             GPIO_PORTN_BASE
-#define AUXIO2_PIN              3
-#define AUXIO3_PORT             GPIO_PORTP_BASE
-#define AUXIO3_PIN              2
-#define AUXIO4_PORT             GPIO_PORTC_BASE
-#define AUXIO4_PIN              4
-#define AUXIO5_PORT             GPIO_PORTC_BASE
-#define AUXIO5_PIN              5
-#define AUXIO6_PORT             GPIO_PORTC_BASE
-#define AUXIO6_PIN              6
-
-// Output definitions (comment out the port definition if used as input)
-
-#define AUXOUTPUT0_PORT         AUXIO0_PORT
-#define AUXOUTPUT0_PIN          AUXIO0_PIN
-
-#define AUXOUTPUT1_PORT         AUXIO1_PORT
-#define AUXOUTPUT1_PIN          AUXIO1_PIN
-
-#define AUXOUTPUT2_PORT         AUXIO3_PORT
-#define AUXOUTPUT2_PIN          AUXIO3_PIN
 
 // Input definitions
 
