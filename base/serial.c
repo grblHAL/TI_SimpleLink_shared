@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2017-2024 Terje Io
+  Copyright (c) 2017-2025 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -190,7 +190,7 @@ const io_stream_t *serialInit (uint32_t baud_rate)
 {
     static const io_stream_t stream = {
         .type = StreamType_Serial,
-        .state.connected = true,
+        .is_connected = stream_connected,
         .read = serialGetC,
         .write = serialWriteS,
         .write_char = serialPutC,

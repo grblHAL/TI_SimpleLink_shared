@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2024 Terje Io
+  Copyright (c) 2018-2025 Terje Io
 
   Some parts
    Copyright (c) 2011-2015 Sungeun K. Jeon
@@ -2067,7 +2067,7 @@ bool driver_init (void)
                 aux_outputs.pins.outputs = output;
             output->id = (pin_function_t)(Output_Aux0 + aux_outputs.n_pins);
 #if AUX_CONTROLS
-            aux_out_remap_explicit(output->port, output->pin, aux_outputs.n_pins, output);
+            aux_out_remap_explicit((void *)output->port, output->pin, aux_outputs.n_pins, output);
 #endif
             aux_outputs.n_pins++;
         }
