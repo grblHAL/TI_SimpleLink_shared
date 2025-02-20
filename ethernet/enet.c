@@ -1,12 +1,12 @@
 //
 // enet.c - lwIP/FreeRTOS TCP/IP stream implementation
 //
-// v1.4 / 2022-11-17 / Io Engineering / Terje
+// v1.5 / 2025-02-19 / Io Engineering / Terje
 //
 
 /*
 
-Copyright (c) 2018-2022, Terje Io
+Copyright (c) 2018-2025, Terje Io
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -52,9 +52,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "posix/sys/socket.h"
 
 #include "grbl/report.h"
+#include "grbl/task.h"
 #include "grbl/nvs_buffer.h"
 
 #include "networking/networking.h"
+
+#ifndef NETIF_NAMESIZE
+#define NETIF_NAMESIZE 6
+#endif
 
 #define SYSTICK_INT_PRIORITY    0x80
 #define ETHERNET_INT_PRIORITY   0xC0
@@ -84,6 +89,8 @@ static uint32_t nvs_address;
 static on_report_options_ptr on_report_options;
 static on_stream_changed_ptr on_stream_changed;
 static char netservices[NETWORK_SERVICES_LEN] = ""; // must be large enough to hold all service names
+static char if_name[NETIF_NAMESIZE] = "";
+static network_flags_t network_status = {};
 
 static char *enet_ip_address (void)
 {
@@ -94,7 +101,7 @@ static char *enet_ip_address (void)
     return ip;
 }
 
-network_info_t *networking_get_info (void)
+static network_info_t *get_info (const char *interface)
 {
     static network_info_t info;
 
@@ -107,8 +114,9 @@ network_info_t *networking_get_info (void)
         *info.status.mask = '\0';
     }
 
+    info.interface = (const char *)if_name;
     info.is_ethernet = true;
-    info.link_up = linkUp;
+    info.link_up = network_status.link_up;
     info.mbps = 100;
     info.status.services = services;
 
@@ -116,7 +124,7 @@ network_info_t *networking_get_info (void)
 
     if(netif) {
 #ifdef __MSP432E401Y__
-        if(linkUp) {
+        if(network_status.link_up) {
             ip4addr_ntoa_r(netif_ip_gw4(netif), info.status.gateway, IP4ADDR_STRLEN_MAX);
             ip4addr_ntoa_r(netif_ip_netmask4(netif), info.status.mask, IP4ADDR_STRLEN_MAX);
         }
@@ -192,7 +200,7 @@ void setupServices (void *pvArg)
     LocatorInit();
     lwIPLocalMACGet(MACAddress);
     LocatorMACAddrSet(MACAddress);
-    LocatorAppTitleSet("Grbl CNC Controller");
+    LocatorAppTitleSet("grblHAL CNC Controller");
 #endif
 
 #if TELNET_ENABLE
@@ -249,6 +257,16 @@ void setupServices (void *pvArg)
 #endif
 }
 
+static void status_event_out (void *data)
+{
+    networking.event(if_name, (network_status_t){ .value = (uint32_t)data });
+}
+
+static void status_event_publish (network_flags_t changed)
+{
+    task_add_immediate(status_event_out, (void *)((network_status_t){ .changed = changed, .flags = network_status }).value);
+}
+
 void lwIPHostTimerHandler (void)
 {
     bool isLinkUp = PREF(GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0)) != 0;
@@ -258,13 +276,12 @@ void lwIPHostTimerHandler (void)
     if(IPAddress == 0xffffffff)
         IPAddress = 0;
 
-    if(isLinkUp != linkUp && IPAddress) {
-
-        if((linkUp = isLinkUp))
-            tcpip_callback(setupServices, 0);
-
+    if(network_status.link_up != network_status.link_up) {
+        if(!(network_status.link_up = isLinkUp))
+            network_status.ip_aquired = Off;
+        status_event_publish((network_flags_t){ .link_up = On, .ip_aquired = !isLinkUp });
 #if TELNET_ENABLE
-        telnetd_notify_link_status(linkUp);
+        telnetd_notify_link_status(network_status.link_up);
 #endif
     }
 
@@ -280,6 +297,11 @@ void lwIPHostTimerHandler (void)
     if(services.websocket)
         websocketd_poll();
 #endif
+
+    if(IPAddress != 0 && !network_status.ip_aquired) {
+        network_status.ip_aquired = On;
+        status_event_publish((network_flags_t){ .ip_aquired = On });
+    }
 }
 
 bool enet_start (void)
@@ -346,6 +368,11 @@ bool enet_start (void)
         lwIPInit(configCPU_CLOCK_HZ, MACAddress, 0, 0, 0, IPADDR_USE_DHCP);
     else
         lwIPInit(configCPU_CLOCK_HZ, MACAddress, ntohl(*(uint32_t *)network.ip), ntohl(*(uint32_t *)network.mask), ntohl(*(uint32_t *)network.gateway), network.ip_mode == IpMode_Static ? IPADDR_USE_STATIC : IPADDR_USE_AUTOIP);
+
+//    netif_index_to_name(1, if_name);
+
+    network_status.interface_up = On;
+    status_event_publish((network_flags_t){ .interface_up = On });
 
 #if MDNS_ENABLE || SSDP_ENABLE
     netif_default->flags |= NETIF_FLAG_IGMP;
@@ -562,6 +589,7 @@ bool enet_init (void)
 
         settings_register(&setting_details);
 
+        networking.get_info = get_info;
         allowed_services.mask = networking_get_services_list((char *)netservices).mask;
     }
 
