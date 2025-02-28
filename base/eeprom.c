@@ -27,11 +27,14 @@
 
 #include <stdlib.h>
 
+#include "grbl/crc.h"
+
 static inline uint32_t _putByte (uint32_t target, uint32_t source, uint32_t byte)
 {
     uint32_t mask = 0xFF;
     byte <<= 3;
     mask = ~(mask << byte);
+
     return (target & mask) | (source << byte);
 }
 
@@ -87,8 +90,13 @@ static nvs_transfer_result_t writeBlock (uint32_t destination, uint8_t *source, 
     } else
         EEPROMProgram((uint32_t *)source, destination + EEPROMOFFSET, size);
 
-    if(with_checksum)
-        putByte(destination + size, calc_checksum(source, size));
+    if(size > 0 && with_checksum) {
+        uint16_t checksum = calc_checksum(source, size);
+        putByte(destination, checksum & 0xFF);
+#if NVS_CRC_BYTES > 1
+        putByte(++destination, checksum >> 1);
+#endif
+    }
 
     return NVS_TransferResult_OK;
 }
@@ -113,8 +121,11 @@ static nvs_transfer_result_t readBlock (uint8_t *destination, uint32_t source, u
     } else
         EEPROMRead((uint32_t *)destination, source + EEPROMOFFSET, size);
 
-    return with_checksum ? (calc_checksum(destination, size) == getByte(source + size) ? NVS_TransferResult_OK : NVS_TransferResult_Failed) : NVS_TransferResult_OK;
-
+#if NVS_CRC_BYTES == 1
+    return !with_checksum || calc_checksum(destination, size) == getByte(source);
+#else
+    return !with_checksum || calc_checksum(destination, size) == (getByte(source) | (getByte(source + 1) << 8));
+#endif
 }
 
 void eeprom_init (void)

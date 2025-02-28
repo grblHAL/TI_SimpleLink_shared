@@ -1898,7 +1898,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "241216";
+    hal.driver_version = "250228";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -1947,10 +1947,6 @@ bool driver_init (void)
 #endif
 
     stream_connect(serialInit(115200));
-
-#if I2C_ENABLE
-    i2c_init();
-#endif
 
     eeprom_init();
 
