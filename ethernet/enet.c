@@ -222,7 +222,7 @@ void setupServices (void *pvArg)
   #endif
   #if SSDP_ENABLE
         if(network.services.ssdp && !services.ssdp)
-            services.ssdp = ssdp_init(network.http_port);
+            services.ssdp = ssdp_init(get_info(if_name));
  #endif
 #endif
 
