@@ -323,7 +323,7 @@ static uint32_t pulse_length, pulse_delay;
 #ifndef FreeRTOS
 static volatile uint32_t elapsed_tics = 0;
 #endif
-static axes_signals_t next_step_outbits;
+static axes_signals_t next_step_out;
 static delay_t delay = { .ms = 1, .callback = NULL }; // NOTE: initial ms set to 1 for "resetting" systick timer on startup
 static probe_state_t probe = {
     .connected = On
@@ -724,11 +724,13 @@ static void stepperCyclesPerTickPrescaled (uint32_t cycles_per_tick)
 // If spindle synchronized motion switch to PID version.
 static void stepperPulseStart (stepper_t *stepper)
 {
-    if(stepper->dir_change)
-        set_dir_outputs(stepper->dir_outbits);
+    if(stepper->dir_changed.bits) {
+        stepper->dir_changed.bits = 0;
+        set_dir_outputs(stepper->dir_out);
+    }
 
-    if(stepper->step_outbits.value) {
-        set_step_outputs(stepper->step_outbits);
+    if(stepper->step_out.bits) {
+        set_step_outputs(stepper->step_out);
         TimerEnable(PULSE_TIMER_BASE, TIMER_A);
     }
 }
@@ -738,22 +740,30 @@ static void stepperPulseStart (stepper_t *stepper)
 // TODO: only delay after setting dir outputs?
 static void stepperPulseStartDelayed (stepper_t *stepper)
 {
-    if(stepper->dir_change) {
+    if(stepper->dir_changed.bits) {
 
-        set_dir_outputs(stepper->dir_outbits);
+        set_dir_outputs(stepper->dir_out);
 
-        if(stepper->step_outbits.value) {
-            next_step_outbits = stepper->step_outbits; // Store out_bits
-            IntRegister(PULSE_TIMER_INT, stepper_pulse_isr_delayed);
-            TimerLoadSet(PULSE_TIMER_BASE, TIMER_A, pulse_delay);
-            TimerEnable(PULSE_TIMER_BASE, TIMER_A);
+        if(stepper->step_out.bits) {
+
+            if(stepper->step_out.bits & stepper->dir_changed.bits) {
+                next_step_out = stepper->step_out; // Store out_bits
+                IntRegister(PULSE_TIMER_INT, stepper_pulse_isr_delayed);
+                TimerLoadSet(PULSE_TIMER_BASE, TIMER_A, pulse_delay);
+                TimerEnable(PULSE_TIMER_BASE, TIMER_A);
+            } else {
+                set_step_outputs(stepper->step_out);
+                TimerEnable(PULSE_TIMER_BASE, TIMER_A);
+            }
         }
 
-       return;
+        stepper->dir_changed.bits = 0;
+
+        return;
     }
 
-    if(stepper->step_outbits.value) {
-        set_step_outputs(stepper->step_outbits);
+    if(stepper->step_out.bits) {
+        set_step_outputs(stepper->step_out);
         TimerEnable(PULSE_TIMER_BASE, TIMER_A);
     }
 }
@@ -770,14 +780,14 @@ static void stepperPulseStartPPI (stepper_t *stepper)
 
     if(stepper->new_block) {
         stepper->new_block = false;
-        set_dir_outputs(stepper->dir_outbits);
+        set_dir_outputs(stepper->dir_out);
         uint_fast16_t steps_per_pulse = stepper->exec_block->steps_per_mm * 25.4f / laser.ppi;
         if(laser.next_pulse && laser.steps_per_pulse)
             laser.next_pulse = laser.next_pulse * steps_per_pulse / laser.steps_per_pulse;
         laser.steps_per_pulse = steps_per_pulse;
     }
 
-    if(stepper->step_outbits.value) {
+    if(stepper->step_out.bits) {
         if(stepper->spindle_pwm != current_pwm) {
             current_pwm = spindleSetSpeed(stepper->spindle_pwm, &spindle_pwm);
             laser.next_pulse = 0;
@@ -793,7 +803,7 @@ static void stepperPulseStartPPI (stepper_t *stepper)
         } else
             laser.next_pulse--;
 
-        set_step_outputs(stepper->step_outbits);
+        set_step_outputs(stepper->step_out);
         TimerEnable(PULSE_TIMER_BASE, TIMER_A);
     }
 }
@@ -1898,7 +1908,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "250228";
+    hal.driver_version = "250327";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
@@ -2135,7 +2145,7 @@ static void stepper_pulse_isr_delayed (void)
     TimerIntClear(PULSE_TIMER_BASE, TIMER_TIMA_TIMEOUT);
     IntRegister(PULSE_TIMER_INT, stepper_pulse_isr);
 
-    set_step_outputs(next_step_outbits);
+    set_step_outputs(next_step_out);
 
     TimerLoadSet(PULSE_TIMER_BASE, TIMER_A, pulse_length);
     TimerEnable(PULSE_TIMER_BASE, TIMER_A);
