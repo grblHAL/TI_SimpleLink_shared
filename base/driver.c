@@ -1365,6 +1365,8 @@ void settings_changed (settings_t *settings, settings_changed_flags_t changed)
         }
 #endif
 
+        hal.stepper.go_idle(true);
+
         pulse_length = (uint32_t)(10.0f * (settings->steppers.pulse_microseconds - STEP_PULSE_LATENCY)) - 1;
 
         if(hal.driver_cap.step_pulse_delay && settings->steppers.pulse_delay_microseconds > 0.0f) {
