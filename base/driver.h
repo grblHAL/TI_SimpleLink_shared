@@ -5,7 +5,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2024 Terje Io
+  Copyright (c) 2018-2025 Terje Io
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -207,6 +207,7 @@ void laser_ppi_mode (bool on);
 typedef struct {
     pin_function_t id;
     uint32_t port;
+    uint32_t user_port;
     uint8_t pin;
     uint32_t bit;
     pin_group_t group;
