@@ -985,7 +985,7 @@ static void aux_irq_handler (uint8_t port, bool state)
 #endif
 #ifdef MPG_MODE_PIN
             case Input_MPGSelect:
-                protocol_enqueue_foreground_task(mpg_select, NULL);
+                task_add_immediate(mpg_select, NULL);
                 break;
 #endif
             default:
@@ -2133,7 +2133,7 @@ bool driver_init (void)
     if(!hal.driver_cap.mpg_mode)
         hal.driver_cap.mpg_mode = stream_mpg_register(stream_open_instance(MPG_STREAM, 115200, NULL, NULL), false, NULL);
     if(hal.driver_cap.mpg_mode)
-        protocol_enqueue_foreground_task(mpg_enable, NULL);
+        task_run_on_startup(mpg_enable, NULL);
 #elif MPG_ENABLE == 2
     if(!hal.driver_cap.mpg_mode)
         hal.driver_cap.mpg_mode = stream_mpg_register(stream_open_instance(MPG_STREAM, 115200, NULL, NULL), false, stream_mpg_check_enable);
@@ -2263,7 +2263,7 @@ static /* inline __attribute__((always_inline))*/ IRQHandler (input_signal_t *in
 #if  MPG_ENABLE == 1
                 case PinGroup_MPG:
                     GPIOIntDisable(MPG_MODE_PORT, MPG_MODE_BIT);
-                    protocol_enqueue_foreground_task(mpg_select, NULL);
+                    task_add_immediate(mpg_select, NULL);
                     break;
 #endif
 
