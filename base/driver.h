@@ -45,6 +45,17 @@
 #include "my_machine.h"
 #endif
 
+#if WEBUI_ENABLE
+  #ifdef WEBUI_INFLASH
+  #undef WEBUI_INFLASH
+  #endif
+  #ifdef LITTLEFS_ENABLE
+  #undef LITTLEFS_ENABLE
+  #endif
+#define WEBUI_INFLASH   1
+#define LITTLEFS_ENABLE 1
+#endif
+
 #include "grbl/driver_opts.h"
 
 #define FreeRTOS
@@ -61,17 +72,6 @@
 
 #if (TELNET_ENABLE || WEBSOCKET_ENABLE || FTP_ENABLE) && !ETHERNET_ENABLE
 #error "Networking protocols requires ethernet enabled!"
-#endif
-
-#if WEBUI_ENABLE
-  #ifdef WEBUI_INFLASH
-  #undef WEBUI_INFLASH
-  #endif
-  #ifdef LITTLEFS_ENABLE
-  #undef LITTLEFS_ENABLE
-  #endif
-#define WEBUI_INFLASH   1
-#define LITTLEFS_ENABLE 1
 #endif
 
 #ifdef BOARD_CNC_BOOSTERPACK
