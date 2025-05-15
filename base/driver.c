@@ -1053,28 +1053,36 @@ bool aux_out_claim_explicit (aux_ctrl_out_t *aux_ctrl)
 
 inline static void spindle_off (spindle_ptrs_t *spindle)
 {
+#if DRIVER_SPINDLE_PWM_ENABLE
     spindle->context.pwm->flags.enable_out = Off;
-#ifdef SPINDLE_DIRECTION_PIN
+  #ifdef SPINDLE_DIRECTION_PIN
     if(spindle->context.pwm->flags.cloned) {
         DIGITAL_OUT(SPINDLE_DIRECTION_PORT, SPINDLE_DIRECTION_PIN, settings.pwm_spindle.invert.ccw);
     } else {
         DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_PIN, settings.pwm_spindle.invert.on);
     }
-#elif defined(SPINDLE_ENABLE_PIN)
+  #elif defined(SPINDLE_ENABLE_PIN)
+    DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_PIN, settings.pwm_spindle.invert.on);
+  #endif
+#else
     DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_PIN, settings.pwm_spindle.invert.on);
 #endif
 }
 
 inline static void spindle_on (spindle_ptrs_t *spindle)
 {
+#if DRIVER_SPINDLE_PWM_ENABLE
     spindle->context.pwm->flags.enable_out = On;
-#ifdef SPINDLE_DIRECTION_PIN
+  #ifdef SPINDLE_DIRECTION_PIN
     if(spindle->context.pwm->flags.cloned) {
         DIGITAL_OUT(SPINDLE_DIRECTION_PORT, SPINDLE_DIRECTION_PIN, !settings.pwm_spindle.invert.ccw);
     } else {
         DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_PIN, !settings.pwm_spindle.invert.on);
     }
-#elif defined(SPINDLE_ENABLE_PIN)
+  #elif defined(SPINDLE_ENABLE_PIN)
+    DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_PIN, !settings.pwm_spindle.invert.on);
+  #endif
+#else
     DIGITAL_OUT(SPINDLE_ENABLE_PORT, SPINDLE_ENABLE_PIN, !settings.pwm_spindle.invert.on);
 #endif
 }
@@ -1938,7 +1946,7 @@ bool driver_init (void)
 #ifdef BOARD_URL
     hal.board_url = BOARD_URL;
 #endif
-    hal.driver_version = "250404";
+    hal.driver_version = "250514";
     hal.driver_setup = driver_setup;
 #if !USE_32BIT_TIMER
     hal.f_step_timer = hal.f_step_timer / (STEPPER_DRIVER_PRESCALER + 1);
